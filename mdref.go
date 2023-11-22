@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mandelsoft/mdref/version"
 )
@@ -14,6 +15,11 @@ func (r Resolution) Resolve(ref string, src string) (string, string) {
 	return f.Resolve(ref, src)
 }
 
+type Options struct {
+	Headings bool
+	Print    bool
+}
+
 func Error(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
@@ -22,10 +28,10 @@ func Error(err error) {
 }
 
 func main() {
-	print := false
+	var opts Options
 
 	args := os.Args[1:]
-	if len(args) > 0 {
+	for len(args) > 0 && strings.HasPrefix(args[0], "--") {
 		if args[0] == "--version" {
 			info := version.Get()
 
@@ -34,22 +40,37 @@ func main() {
 		}
 
 		if args[0] == "--help" {
-			fmt.Printf("mdgen [--doc] [--copy] [<source dir> [<target dir>]]\n")
+			fmt.Printf("mdref {<options>} [<source dir> [<target dir>]]\n")
 			fmt.Printf(`
 Flags:
-  --list   print ref list
+  --version   just print the program version
+  --help      this help text
+  --headings  prefer using standard heading anchors
+  --list      print reference index and usage list
 
 mdref evalates a document tree with markdown files containing logical references
 and resolves thoses refs to markdown links. The generated tree is written
 to a target folder.
 
 If no target directory is given, only a consistency check is done.
+If the option --headings is given, reference targets before or after
+a standard Markdown heading will use the Markdown heading anchor.
+
+If the option --list is given a reference index and usage list is
+printed, additionally.
 `)
 			os.Exit(0)
 		}
-		if args[0] == "--list" {
-			print = true
+
+		switch args[0] {
+		case "--list":
+			opts.Print = true
 			args = args[1:]
+		case "--headings":
+			opts.Headings = true
+			args = args[1:]
+		default:
+			Error(fmt.Errorf("invalid option %q", args[0]))
 		}
 	}
 	if len(args) > 2 {
@@ -65,18 +86,18 @@ If no target directory is given, only a consistency check is done.
 		dst = args[1]
 	}
 
-	files, err := scan(src, "")
+	files, err := scan(src, "", opts)
 	Error(err)
 
 	resolution, err := resolve(files)
 	Error(err)
 
-	if print {
+	if opts.Print {
 		Print(files, resolution)
-	} else {
-		if dst != "" {
-			err := generate(files, resolution, src, dst)
-			Error(err)
-		}
+	}
+
+	if dst != "" {
+		err := generate(files, resolution, src, dst)
+		Error(err)
 	}
 }

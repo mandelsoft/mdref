@@ -1,5 +1,4 @@
 
-<a id="reference"></a>
 ## Reference Targets
 
 Any reference in a Markdown document may
@@ -20,7 +19,6 @@ A typical link, like the one above, looks like this:
 </pre>
 
 
-<a id="normal-anchor"></a>
 ### Anchors
 
 Anchors are just defined by using the reference syntax outside the Markdown reference syntax.

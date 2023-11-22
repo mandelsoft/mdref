@@ -6,9 +6,16 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
-type Refs map[string]string
+type Ref struct {
+	text     string
+	anchor   string
+	generate bool
+}
+
+type Refs map[string]*Ref
 
 type File struct {
 	relpath string
@@ -18,8 +25,9 @@ type File struct {
 }
 
 func (f *File) Resolve(ref string, src string) (string, string) {
+	tgt := f.targets[ref]
 	if src == f.relpath {
-		return "#" + ref, f.targets[ref]
+		return "#" + tgt.anchor, tgt.text
 	}
 
 	ss := strings.Split(src, "/")
@@ -35,10 +43,10 @@ func (f *File) Resolve(ref string, src string) (string, string) {
 	for i := 1; i < len(ss); i++ {
 		r = "../" + r
 	}
-	return r + "#" + ref, f.targets[ref]
+	return r + "#" + tgt.anchor, tgt.text
 }
 
-func scan(src, rel string) ([]*File, error) {
+func scan(src, rel string, opts Options) ([]*File, error) {
 	var result []*File
 
 	list, err := os.ReadDir(src)
@@ -49,14 +57,14 @@ func scan(src, rel string) ([]*File, error) {
 		rp := path.Join(rel, e.Name())
 		ep := path.Join(src, e.Name())
 		if e.IsDir() {
-			r, err := scan(ep, rp)
+			r, err := scan(ep, rp, opts)
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, r...)
 		} else {
 			if strings.HasSuffix(e.Name(), ".md") {
-				refs, trms, tgts, err := scanRefs(ep)
+				refs, trms, tgts, err := scanRefs(ep, opts)
 				if err != nil {
 					return nil, err
 				}
@@ -81,7 +89,8 @@ var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var trmExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
 var tgtExp = regexp.MustCompile(`[^([]{{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
 
-func scanRefs(src string) (Refs, Refs, Refs, error) {
+func scanRefs(src string, opts Options) (Refs, Refs, Refs, error) {
+	standard := map[string]struct{}{}
 	refs := Refs{}
 	trms := Refs{}
 	targets := Refs{}
@@ -95,7 +104,7 @@ func scanRefs(src string) (Refs, Refs, Refs, error) {
 	for _, m := range matches {
 		key := string(m[1])
 		// fmt.Printf("%s: found ref %s\n", src, key)
-		refs[key] = ""
+		refs[key] = nil
 	}
 	matches = trmExp.FindAllSubmatch(data, -1)
 	for _, m := range matches {
@@ -105,16 +114,101 @@ func scanRefs(src string) (Refs, Refs, Refs, error) {
 		}
 		key = strings.ToLower(key)
 		// fmt.Printf("%s: found term ref %s\n", src, key)
-		trms[key] = ""
+		trms[key] = nil
 	}
 	matches = tgtExp.FindAllSubmatch(data, -1)
-	for _, m := range matches {
+	indices := tgtExp.FindAllIndex(data, -1)
+	for i, m := range matches {
 		key := string(m[1])
 		// fmt.Printf("%s: found ref %s[%s]\n", src, key, string(m[3]))
 		if _, ok := targets[key]; ok {
 			return nil, nil, nil, fmt.Errorf("duplicate use of target %s", key)
 		}
-		targets[key] = string(m[3])
+
+		anchor, gen := key, true
+		if opts.Headings {
+			anchor, gen = determineAnchor(data, indices[i][0], indices[i][1], key)
+			if !gen {
+				if _, ok := standard[anchor]; ok {
+					// similar heading used twice in document
+					// fall back to anchor generation
+					gen = true
+					anchor = key
+				} else {
+					standard[anchor] = struct{}{}
+				}
+			}
+		}
+		ref := &Ref{
+			text:     string(m[3]),
+			anchor:   anchor,
+			generate: gen,
+		}
+		targets[key] = ref
 	}
 	return refs, trms, targets, nil
+}
+
+func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
+	if data[beg] != '{' {
+		beg++
+	}
+	var title []byte
+	if len(data) > end+1 && data[end] == '\n' && data[end+1] == '#' {
+		// before heading
+		s := end + 2
+		for s < len(data) {
+			if data[s] != '#' {
+				break
+			}
+			s++
+		}
+		e := s
+		for e < len(data) {
+			if data[e] == '\n' {
+				break
+			}
+			e++
+
+		}
+		if s < len(data) {
+			title = data[s:e]
+		}
+	} else {
+		if beg > 0 && data[beg-1] == '\n' {
+			// possibly after heading
+			e := beg - 1
+			s := e
+			for s > 1 {
+				if data[s-1] == '\n' {
+					break
+				}
+				s--
+			}
+			line := data[s:e]
+			found := false
+			for len(line) > 0 && line[0] == '#' {
+				line = line[1:]
+				found = true
+			}
+			if found {
+				title = line
+			}
+		}
+	}
+
+	link := strings.ToLower(strings.TrimSpace(string(title)))
+	if len(link) > 0 {
+		l := ""
+		for _, c := range link {
+			if unicode.IsLetter(c) || unicode.IsDigit(c) {
+				l += string(c)
+			}
+			if c == ' ' {
+				l += "-"
+			}
+		}
+		return l, false
+	}
+	return def, true
 }

@@ -15,23 +15,30 @@ and anchors.
 ## Command Line Syntax
 
 ```shell
-$ mdref [--list] <source folder> [<target folder>]
+$ mdref {<option>} <source folder> [<target folder>]
+
+Flags:
+  --version   just print the program version
+  --help      print the help text
+  --headings  prefer to use standard Markown heading anchors
+  --list      print reference index and usage list 
 ```
 
-If called with a target folder a consistency check is
+If called without a target folder a consistency check is
 done. It checks, that for all used references the appropriate anchors are defined.
 
 If called with target folder, the source tree
 is evaluated and the generated files are provided in the target folder.
 
-If the `--list` option is given, only the check is done and the reference index is printed.
+If the `--list` option is given, additionally the reference index
+and usage list is printed.
 
 
 The source folder may not only contain markdown files. The generator copies all non-markdown files in the same structure to the target folder.
 
 ## Reference and Anchor Syntax
 
-anchors and references are character sequences
+Anchors and references are character sequences
 following the regular expression
 
 {{name}}

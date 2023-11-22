@@ -1,10 +1,9 @@
 
-<a id="term"></a>
 ## Terms
 
 Instead of using a reference as target for a markdown
 reference it may be used as complete markdown linked text.
-In this case the [logical reference](references.md#reference) appears inside the `[]` pair of a markdown reference, but without the target part:
+In this case the [logical reference](references.md#reference-targets) appears inside the `[]` pair of a markdown reference, but without the target part:
 
 <pre>
 A [{{&lt;name>}}] is a ....
@@ -13,7 +12,6 @@ A [{{&lt;name>}}] is a ....
 Such a reference is called *term reference*. It refers to an
 anchor providing an additional text. This term reference is substituted by a complete link for the term text and the term reference.
 
-<a id="term-flavors"></a>
 ### Term Substitution Flavors
 
 There are several flavors for using a term:
@@ -22,7 +20,6 @@ There are several flavors for using a term:
 - The term text should be capitalized, for example if used as first word in a sentence. Here the first letter of the name is taken in upper case, for example <code>[{{Term}&rcub;]</code>.
 - If the plural form as well as upper case should be substituted, both mechanisms can be combined, like in <code>[{{*Term}&rcub;]</code>
 
-<a id="term-anchors"></a>
 ### Anchors
 
 Anchors for terms are just defined by using the reference syntax outside the markdown reference syntax and adding a text separated by a colon ( `:`).

@@ -19,4 +19,4 @@ BUILD_FLAGS := "-s -w \
 build: ${SOURCES}
 	mkdir -p bin
 	CGO_ENABLED=0 go build -ldflags $(BUILD_FLAGS) -o bin/mdref .
-	bin/mdref src .
+	bin/mdref --list --headings src .

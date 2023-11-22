@@ -7,7 +7,12 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+var caser = cases.Title(language.AmericanEnglish)
 
 func generate(files []*File, resolution Resolution, source, target string) error {
 
@@ -60,10 +65,14 @@ func generate(files []*File, resolution Resolution, source, target string) error
 				data = exp.ReplaceAll(data, []byte(ref))
 			}
 
-			for k := range f.targets {
-				exp := regexp.MustCompile("{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}")
-
-				data = exp.ReplaceAll(data, []byte(`<a id="`+k+`"></a>`))
+			for k, r := range f.targets {
+				if r.generate {
+					exp := regexp.MustCompile("{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}")
+					data = exp.ReplaceAll(data, []byte(`<a id="`+k+`"></a>`))
+				} else {
+					exp := regexp.MustCompile("\n?{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}")
+					data = exp.ReplaceAll(data, []byte(""))
+				}
 			}
 
 			_, err = w.Write(data)

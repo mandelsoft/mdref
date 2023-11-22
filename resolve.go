@@ -33,7 +33,7 @@ func resolve(files []*File) (Resolution, error) {
 				fmt.Fprintf(os.Stderr, "%s: term reference %s not found\n", f.relpath, k)
 				failed++
 			} else {
-				if r.targets[k] == "" {
+				if r.targets[k].text == "" {
 					fmt.Fprintf(os.Stderr, "%s: target %s in %s without term\n", f.relpath, k, r.relpath)
 					failed++
 				}
