@@ -75,6 +75,15 @@ func generate(files []*File, resolution Resolution, source, target string) error
 				}
 			}
 
+			for k, c := range f.commands {
+				exp := regexp.MustCompile(regexp.QuoteMeta(k))
+				sub, err := c.GetSubstitution(src)
+				if err != nil {
+					return fmt.Errorf("%s: %s; %w", f.relpath, k, err)
+				}
+				data = exp.ReplaceAll(data, sub)
+			}
+
 			_, err = w.Write(data)
 			r.Close()
 			w.Close()

@@ -34,6 +34,12 @@ func Print(files []*File, resolution Resolution) {
 					fmt.Printf("   - %s: %s[%s]\n", k, ref, str)
 				}
 			}
+			if len(f.commands) > 0 {
+				fmt.Printf("  commands:\n")
+				for k, _ := range f.commands {
+					fmt.Printf("   - %s\n", k)
+				}
+			}
 		} else {
 			fmt.Printf("*** %s: additional file\n", f.relpath)
 		}

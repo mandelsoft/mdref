@@ -3,7 +3,7 @@
 
 This markdown reference generator uses
 a document tree with markdown files containing
-a special syntax for tags and references
+a special annotation syntax for tags and references
 as input and generates an appropriate target tree with
 references resolved to resolved Markdown links
 and anchors.
@@ -56,3 +56,11 @@ complete document tree.
 The generator supports two kinds of references:
 - [Reference targets](doc/chapters/references.md#reference-targets) 
 - [Terms](doc/chapters/terms.md#terms)
+
+## Commands
+
+Besides the generation of consistent references among Markdown documents
+the generator also supports some useful extensions to enrich the content
+of the Markdown file.
+
+The list of all supported commands can be found [here](doc/chapters/commands.md#commands).

@@ -18,10 +18,11 @@ type Ref struct {
 type Refs map[string]*Ref
 
 type File struct {
-	relpath string
-	refs    Refs
-	terms   Refs
-	targets Refs
+	relpath  string
+	refs     Refs
+	terms    Refs
+	targets  Refs
+	commands Commands
 }
 
 func (f *File) Resolve(ref string, src string) (string, string) {
@@ -64,15 +65,16 @@ func scan(src, rel string, opts Options) ([]*File, error) {
 			result = append(result, r...)
 		} else {
 			if strings.HasSuffix(e.Name(), ".md") {
-				refs, trms, tgts, err := scanRefs(ep, opts)
+				refs, trms, tgts, cmds, err := scanRefs(ep, opts)
 				if err != nil {
 					return nil, err
 				}
 				result = append(result, &File{
-					relpath: rp,
-					refs:    refs,
-					terms:   trms,
-					targets: tgts,
+					relpath:  rp,
+					refs:     refs,
+					terms:    trms,
+					targets:  tgts,
+					commands: cmds,
 				})
 			} else {
 				result = append(result, &File{
@@ -88,8 +90,9 @@ func scan(src, rel string, opts Options) ([]*File, error) {
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var trmExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
 var tgtExp = regexp.MustCompile(`[^([]{{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
+var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]+})+)}`)
 
-func scanRefs(src string, opts Options) (Refs, Refs, Refs, error) {
+func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	standard := map[string]struct{}{}
 	refs := Refs{}
 	trms := Refs{}
@@ -97,15 +100,18 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, error) {
 
 	data, err := os.ReadFile(src)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("cannot read %s: %w", src, err)
+		return nil, nil, nil, nil, fmt.Errorf("cannot read %s: %w", src, err)
 	}
 
+	// reference substitutions
 	matches := refExp.FindAllSubmatch(data, -1)
 	for _, m := range matches {
 		key := string(m[1])
 		// fmt.Printf("%s: found ref %s\n", src, key)
 		refs[key] = nil
 	}
+
+	// term substitutions
 	matches = trmExp.FindAllSubmatch(data, -1)
 	for _, m := range matches {
 		key := string(m[1])
@@ -116,13 +122,15 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, error) {
 		// fmt.Printf("%s: found term ref %s\n", src, key)
 		trms[key] = nil
 	}
+
+	// reference targets
 	matches = tgtExp.FindAllSubmatch(data, -1)
 	indices := tgtExp.FindAllIndex(data, -1)
 	for i, m := range matches {
 		key := string(m[1])
 		// fmt.Printf("%s: found ref %s[%s]\n", src, key, string(m[3]))
 		if _, ok := targets[key]; ok {
-			return nil, nil, nil, fmt.Errorf("duplicate use of target %s", key)
+			return nil, nil, nil, nil, fmt.Errorf("duplicate use of target %s", key)
 		}
 
 		anchor, gen := key, true
@@ -146,7 +154,27 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, error) {
 		}
 		targets[key] = ref
 	}
-	return refs, trms, targets, nil
+
+	cmds := Commands{}
+
+	// commands
+	matches = cmdExp.FindAllSubmatch(data, -1)
+	for _, m := range matches {
+		var cmd Command
+		key := string(m[1])
+		switch key {
+		case "include":
+			cmd, err = NewInclude(m[2])
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+		default:
+			return nil, nil, nil, nil, fmt.Errorf("invalid command %q", key)
+		}
+		cmds[string(m[0])] = cmd
+	}
+
+	return refs, trms, targets, cmds, nil
 }
 
 func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
