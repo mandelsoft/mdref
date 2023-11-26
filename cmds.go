@@ -10,12 +10,14 @@ import (
 )
 
 type Command interface {
+	Position() string
 	GetSubstitution(path string) ([]byte, error)
 }
 
 type Commands map[string]Command
 
 type Include struct {
+	_Position
 	file string
 }
 
@@ -49,7 +51,7 @@ var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}$")
 // --- end include args ---
 // --- end example ---
 
-func NewInclude(args []byte) (Command, error) {
+func NewInclude(line, col int, args []byte) (Command, error) {
 	var err error
 
 	matches := includeExpNum.FindSubmatch(args)
@@ -68,12 +70,12 @@ func NewInclude(args []byte) (Command, error) {
 				return nil, fmt.Errorf("invalid start line: %w", err)
 			}
 		}
-		return &IncludeNum{Include{string(matches[1])}, int(start), int(end)}, nil
+		return &IncludeNum{Include{Position{line, col}, string(matches[1])}, int(start), int(end)}, nil
 	}
 
 	matches = includeExpPat.FindSubmatch(args)
 	if len(matches) != 0 {
-		return &IncludePat{Include{string(matches[1])}, string(matches[2])}, nil
+		return &IncludePat{Include{Position{line, col}, string(matches[1])}, string(matches[2])}, nil
 	}
 
 	return nil, fmt.Errorf("invalid include arguments %q", string(args))

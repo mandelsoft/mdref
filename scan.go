@@ -9,7 +9,19 @@ import (
 	"unicode"
 )
 
+type Position struct {
+	line int
+	col  int
+}
+
+func (r *Position) Position() string {
+	return fmt.Sprintf("%d:%d", r.line, r.col)
+}
+
+type _Position = Position
+
 type Ref struct {
+	_Position
 	text     string
 	anchor   string
 	generate bool
@@ -103,34 +115,35 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 		return nil, nil, nil, nil, fmt.Errorf("cannot read %s: %w", src, err)
 	}
 
+	info := NewData(src, data)
+
 	// reference substitutions
-	matches := refExp.FindAllSubmatch(data, -1)
-	for _, m := range matches {
+	matches, indices := info.scanFor(refExp)
+	for i, m := range matches {
 		key := string(m[1])
-		// fmt.Printf("%s: found ref %s\n", src, key)
-		refs[key] = nil
+		line, col := info.Position(indices[i][0])
+		refs[key] = &Ref{_Position: Position{line: line, col: col}}
 	}
 
 	// term substitutions
-	matches = trmExp.FindAllSubmatch(data, -1)
-	for _, m := range matches {
+	matches, indices = info.scanFor(trmExp)
+	for i, m := range matches {
 		key := string(m[1])
 		if strings.HasPrefix(key, "*") {
 			key = key[1:]
 		}
 		key = strings.ToLower(key)
-		// fmt.Printf("%s: found term ref %s\n", src, key)
-		trms[key] = nil
+		line, col := info.Position(indices[i][0])
+		trms[key] = &Ref{_Position: Position{line: line, col: col}}
 	}
 
 	// reference targets
-	matches = tgtExp.FindAllSubmatch(data, -1)
-	indices := tgtExp.FindAllIndex(data, -1)
+	matches, indices = info.scanFor(tgtExp)
 	for i, m := range matches {
+		line, col := info.Position(indices[i][0])
 		key := string(m[1])
-		// fmt.Printf("%s: found ref %s[%s]\n", src, key, string(m[3]))
 		if _, ok := targets[key]; ok {
-			return nil, nil, nil, nil, fmt.Errorf("duplicate use of target %s", key)
+			return nil, nil, nil, nil, fmt.Errorf("%d:%d: duplicate use of target %s", line, col, key)
 		}
 
 		anchor, gen := key, true
@@ -148,9 +161,10 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 			}
 		}
 		ref := &Ref{
-			text:     string(m[3]),
-			anchor:   anchor,
-			generate: gen,
+			_Position: Position{line: line, col: col},
+			text:      string(m[3]),
+			anchor:    anchor,
+			generate:  gen,
 		}
 		targets[key] = ref
 	}
@@ -158,13 +172,14 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	cmds := Commands{}
 
 	// commands
-	matches = cmdExp.FindAllSubmatch(data, -1)
-	for _, m := range matches {
+	matches, indices = info.scanFor(cmdExp)
+	for i, m := range matches {
 		var cmd Command
+		line, col := info.Position(indices[i][0])
 		key := string(m[1])
 		switch key {
 		case "include":
-			cmd, err = NewInclude(m[2])
+			cmd, err = NewInclude(line, col, m[2])
 			if err != nil {
 				return nil, nil, nil, nil, err
 			}
@@ -175,6 +190,41 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	}
 
 	return refs, trms, targets, cmds, nil
+}
+
+type Data struct {
+	relpath string
+	data    []byte
+	lines   []int
+}
+
+func NewData(p string, data []byte) *Data {
+	lines := []int{0}
+
+	for i := 0; i < len(data); i++ {
+		if data[i] == '\n' {
+			lines = append(lines, i+1)
+		}
+	}
+	return &Data{p, data, lines}
+}
+
+func (l *Data) Position(idx int) (int, int) {
+	for n, i := range l.lines {
+		if idx < i {
+			return n, idx - l.lines[n-1] + 1
+		}
+	}
+	return -1, -1
+}
+
+func (l *Data) Location(idx int) string {
+	line, col := l.Position(idx)
+	return fmt.Sprintf("%s: %s:%s", l.relpath, line, col)
+}
+
+func (l *Data) scanFor(exp *regexp.Regexp) ([][][]byte, [][]int) {
+	return exp.FindAllSubmatch(l.data, -1), exp.FindAllIndex(l.data, -1)
 }
 
 func determineAnchor(data []byte, beg, end int, def string) (string, bool) {

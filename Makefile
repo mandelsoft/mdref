@@ -11,10 +11,10 @@ GOPATH                                         := $(shell go env GOPATH)
 
 NOW         := $(shell date -u +%FT%T%z)
 BUILD_FLAGS := "-s -w \
- -X github.com/mandelsoft/mdref/version.gitVersion=$(EFFECTIVE_VERSION) \
- -X github.com/mandelsoft/mdref/version.gitTreeState=$(GIT_TREE_STATE) \
- -X github.com/mandelsoft/mdref/version.gitCommit=$(COMMIT) \
- -X github.com/mandelsoft/mdref/version.buildDate=$(NOW)"
+ -X main.gitVersion=$(EFFECTIVE_VERSION) \
+ -X main.gitTreeState=$(GIT_TREE_STATE) \
+ -X main.gitCommit=$(COMMIT) \
+ -X main.buildDate=$(NOW)"
 
 build: ${SOURCES}
 	mkdir -p bin

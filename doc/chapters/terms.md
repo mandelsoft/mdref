@@ -3,7 +3,8 @@
 
 Instead of using a reference as target for a markdown
 reference it may be used as complete markdown linked text.
-In this case the [logical reference](references.md#reference-targets) appears inside the `[]` pair of a markdown reference, but without the target part:
+In this case the [logical reference](references.md#references) appears inside the `[]` pair
+of a markdown reference, but without the target part:
 
 <pre>
 A [{{&lt;name>}}] is a ....
@@ -22,7 +23,8 @@ There are several flavors for using a term:
 
 ### Anchors
 
-Anchors for terms are just defined by using the reference syntax outside the markdown reference syntax and adding a text separated by a colon ( `:`).
+Anchors for terms are just defined by using the reference syntax outside the
+Markdown reference syntax and adding a text separated by a colon ( `:`).
 
 For example
 
@@ -33,3 +35,5 @@ For example
 
 It might be placed anywhere in a Markdown document,
 therefore, it is possible to link to any location, not only section headers.
+
+Term anchors may be used for regular references, also.

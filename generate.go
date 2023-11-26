@@ -79,7 +79,7 @@ func generate(files []*File, resolution Resolution, source, target string) error
 				exp := regexp.MustCompile(regexp.QuoteMeta(k))
 				sub, err := c.GetSubstitution(src)
 				if err != nil {
-					return fmt.Errorf("%s: %s; %w", f.relpath, k, err)
+					return fmt.Errorf("%s: %s: %s; %w", f.relpath, c.Position(), k, err)
 				}
 				data = exp.ReplaceAll(data, sub)
 			}

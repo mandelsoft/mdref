@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/mandelsoft/mdref/version"
 )
 
 type Resolution map[string]*File
@@ -33,7 +31,7 @@ func main() {
 	args := os.Args[1:]
 	for len(args) > 0 && strings.HasPrefix(args[0], "--") {
 		if args[0] == "--version" {
-			info := version.Get()
+			info := Get()
 
 			fmt.Printf("mdgen version %s.%s.%s (%s) [%s %s]\n", info.Major, info.Minor, info.Patch, info.PreRelease, info.GitTreeState, info.GitCommit)
 			os.Exit(0)
@@ -91,6 +89,7 @@ printed, additionally.
 
 	resolution, err := resolve(files)
 	Error(err)
+	Error(checkCommands(src, files))
 
 	if opts.Print {
 		Print(files, resolution)

@@ -5,12 +5,13 @@ This markdown reference generator uses
 a document tree with markdown files containing
 a special annotation syntax for tags and references
 as input and generates an appropriate target tree with
-references resolved to resolved Markdown links
+references resolved to consistent Markdown links
 and anchors.
 
-- Never fix heading anymore with corrupting links all over the document tree
+- Never fix headings anymore with corrupting links all over the document tree
 - Never move text blocks or even complete files around in the document tree with corrupting links all over the document tree
 - Use terms all over the document tree, which are automatically linked to their explanation.
+- Provide examples documentation consistent with working code.
 
 ## Command Line Syntax
 
@@ -36,6 +37,17 @@ and usage list is printed.
 
 The source folder may not only contain markdown files. The generator copies all non-markdown files in the same structure to the target folder.
 
+## General Annotation Syntax
+
+Annotations used by this generator use a common syntax
+
+```
+{{<elementsyntax>}}
+```
+
+Elements may be [{{*anchor}}], [{{*term-anchor}}], [{{*reference}}] or [{{*commands}}].
+
+
 ## Reference and Anchor Syntax
 
 Anchors and references are character sequences
@@ -53,7 +65,7 @@ may be copied or even moved into a completely different folder structure without
 Therefore, the anchors must be globally unique in the
 complete document tree.
 
-The generator supports two kinds of references:
+The generator supports two kinds of references as well as anchors:
 - [{{*Reference}}] 
 - [{{*Term}}]
 
