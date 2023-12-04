@@ -55,10 +55,36 @@ extracts the lines between the start and end pattern
 
 ```
 // --- begin include args ---
-var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?::([0-9]+)?)?})?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}$")
+var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?::([0-9]+)?)?}(?:{(.*)})?)?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}(?:{(.*)})?$")
 
 // --- end include args ---
 ```
 
 which are the regexps used to parse the two argument flavors.
+
+An optional third argument can be used to specify a filter regular
+expression. It must contain one matching group. The
+selected file range is matched by this regular expression and
+the content of the first matching group of the all matches is
+concatenated. If the expression uses the multi-line mode, the matches
+are suffixed with a newline.
+
+
+The previous paragraph is taken from the source file
+```go
+// --- begin filter ---
+// An optional third argument can be used to specify a filter regular
+// expression. It must contain one matching group. The
+// selected file range is matched by this regular expression and
+// the content of the first matching group of the all matches is
+// concatenated. If the expression uses the multi-line mode, the matches
+// are suffixed with a newline.
+// --- end filter ---
+```
+using
+
+<pre>
+{{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
+</pre>
+

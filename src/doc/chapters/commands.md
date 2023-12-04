@@ -56,3 +56,18 @@ extracts the lines between the start and end pattern
 ```
 
 which are the regexps used to parse the two argument flavors.
+
+{{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}}
+
+The previous paragraph is taken from the source file
+```go
+// --- begin filter ---
+{{include}{../../../cmds.go}{filter}}
+// --- end filter ---
+```
+using
+
+<pre>
+{{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
+</pre>
+

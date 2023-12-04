@@ -18,7 +18,8 @@ type Commands map[string]Command
 
 type Include struct {
 	_Position
-	file string
+	file   string
+	filter *regexp.Regexp
 }
 
 func (i *Include) getData(p string) ([]byte, error) {
@@ -45,8 +46,8 @@ type IncludePat struct {
 
 // --- begin example ---
 // --- begin include args ---
-var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?::([0-9]+)?)?})?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}$")
+var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?::([0-9]+)?)?}(?:{(.*)})?)?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}(?:{(.*)})?$")
 
 // --- end include args ---
 // --- end example ---
@@ -70,15 +71,58 @@ func NewInclude(line, col int, args []byte) (Command, error) {
 				return nil, fmt.Errorf("invalid start line: %w", err)
 			}
 		}
-		return &IncludeNum{Include{Position{line, col}, string(matches[1])}, int(start), int(end)}, nil
+		var filter *regexp.Regexp
+		if matches[4] != nil {
+			filter, err = regexp.Compile(string(matches[4]))
+			if err != nil {
+				return nil, fmt.Errorf("invalid filter expression: %w", err)
+			}
+		}
+		return &IncludeNum{Include{Position{line, col}, string(matches[1]), filter}, int(start), int(end)}, nil
 	}
 
 	matches = includeExpPat.FindSubmatch(args)
 	if len(matches) != 0 {
-		return &IncludePat{Include{Position{line, col}, string(matches[1])}, string(matches[2])}, nil
+		var filter *regexp.Regexp
+		if matches[3] != nil {
+			filter, err = regexp.Compile(string(matches[3]))
+			if err != nil {
+				return nil, fmt.Errorf("invalid filter expression: %w", err)
+			}
+		}
+		return &IncludePat{Include{Position{line, col}, string(matches[1]), filter}, string(matches[2])}, nil
 	}
 
 	return nil, fmt.Errorf("invalid include arguments %q", string(args))
+}
+
+// --- begin filter ---
+// An optional third argument can be used to specify a filter regular
+// expression. It must contain one matching group. The
+// selected file range is matched by this regular expression and
+// the content of the first matching group of the all matches is
+// concatenated. If the expression uses the multi-line mode, the matches
+// are suffixed with a newline.
+// --- end filter ---
+
+func (i *Include) Filter(data []byte) ([]byte, error) {
+	if i.filter == nil {
+		return data, nil
+	}
+	sep := ""
+	if strings.HasPrefix(i.filter.String(), "(?m)") {
+		sep = "\n"
+	}
+	matches := i.filter.FindAllSubmatch(data, -1)
+	var result []byte
+	for _, m := range matches {
+		if len(m) != 2 {
+			return nil, fmt.Errorf("regular expressin must contain one matching group")
+		}
+		result = append(result, m[1]...)
+		result = append(result, []byte(sep)...)
+	}
+	return result, nil
 }
 
 func (i *IncludeNum) GetSubstitution(p string) ([]byte, error) {
@@ -102,7 +146,7 @@ func (i *IncludeNum) GetSubstitution(p string) ([]byte, error) {
 	if end > len(lines) {
 		return nil, fmt.Errorf("end line %d after end of file (%q %d lines", end, i.file, len(lines))
 	}
-	return []byte(strings.Join(lines[start:end], "\n")), nil
+	return i.Filter([]byte(strings.Join(lines[start:end], "\n")))
 }
 
 func (i *IncludePat) GetSubstitution(p string) ([]byte, error) {
@@ -119,7 +163,8 @@ func (i *IncludePat) GetSubstitution(p string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return data[start:end], nil
+
+	return i.Filter(data[start:end])
 }
 
 func (i *IncludePat) match(data []byte, key string) (int, int, error) {
