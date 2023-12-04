@@ -1,6 +1,5 @@
 # Markdown Reference Generator
 
-
 This markdown reference generator uses
 a document tree with markdown files containing
 a special annotation syntax for tags and references
@@ -45,7 +44,7 @@ Annotations used by this generator use a common syntax
 {{<elementsyntax>}}
 ```
 
-Elements may be [anchors](doc/chapters/references.md#anchors), [term anchors](doc/chapters/terms.md#anchors), [references](doc/chapters/references.md#references) or [commands](doc/chapters/commands.md#commands).
+Elements may be [anchors](doc/chapters/references.md#anchors), [term anchors](doc/chapters/terms.md#anchors), [references](doc/chapters/references.md) or [commands](doc/chapters/commands.md).
 
 
 ## Reference and Anchor Syntax
@@ -66,8 +65,8 @@ Therefore, the anchors must be globally unique in the
 complete document tree.
 
 The generator supports two kinds of references as well as anchors:
-- [References](doc/chapters/references.md#references) 
-- [Terms](doc/chapters/terms.md#terms)
+- [References](doc/chapters/references.md) 
+- [Terms](doc/chapters/terms.md)
 
 ## Commands
 
@@ -75,4 +74,4 @@ Besides the generation of consistent references among Markdown documents
 the generator also supports some useful extensions to enrich the content
 of the Markdown file.
 
-The list of all supported commands can be found [here](doc/chapters/commands.md#commands).
+The list of all supported commands can be found [here](doc/chapters/commands.md).

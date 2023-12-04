@@ -1,9 +1,8 @@
-
 ## Terms
 
 Instead of using a reference as target for a markdown
 reference it may be used as complete markdown linked text.
-In this case the [logical reference](references.md#references) appears inside the `[]` pair
+In this case the [logical reference](references.md) appears inside the `[]` pair
 of a markdown reference, but without the target part:
 
 <pre>

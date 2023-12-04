@@ -32,14 +32,14 @@ parts of a Go file to provide some documentation consistent with actual
 code like in the following example
 
 <pre>
-{{include}{../../../scan.go}{102:105}&rcub;
+{{include}{../../../scan.go}{105:108}&rcub;
 </pre>
 
 which extracts the regular expressions used
 to parse the annotations used by this tool.
 
 ```go
-{{include}{../../../scan.go}{102:105}}
+{{include}{../../../scan.go}{105:108}}
 ```
 
 The second example uses the pattern syntax

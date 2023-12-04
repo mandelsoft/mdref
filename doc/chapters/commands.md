@@ -31,7 +31,7 @@ parts of a Go file to provide some documentation consistent with actual
 code like in the following example
 
 <pre>
-{{include}{../../../scan.go}{102:105}&rcub;
+{{include}{../../../scan.go}{105:108}&rcub;
 </pre>
 
 which extracts the regular expressions used
@@ -40,7 +40,7 @@ to parse the annotations used by this tool.
 ```go
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var trmExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
-var tgtExp = regexp.MustCompile(`[^([]{{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
+var tgtExp = regexp.MustCompile(`(?:^|[^([]){{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
 var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]+})+)}`)
 ```
 

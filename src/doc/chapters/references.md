@@ -1,4 +1,3 @@
-
 {{reference:reference}}
 ## References
 

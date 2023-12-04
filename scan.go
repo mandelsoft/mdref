@@ -56,7 +56,10 @@ func (f *File) Resolve(ref string, src string) (string, string) {
 	for i := 1; i < len(ss); i++ {
 		r = "../" + r
 	}
-	return r + "#" + tgt.anchor, tgt.text
+	if tgt.anchor != "" {
+		return r + "#" + tgt.anchor, tgt.text
+	}
+	return r, tgt.text
 }
 
 func scan(src, rel string, opts Options) ([]*File, error) {
@@ -101,7 +104,7 @@ func scan(src, rel string, opts Options) ([]*File, error) {
 
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var trmExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
-var tgtExp = regexp.MustCompile(`[^([]{{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
+var tgtExp = regexp.MustCompile(`(?:^|[^([]){{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
 var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]+})+)}`)
 
 func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
@@ -234,6 +237,9 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 	var title []byte
 	if len(data) > end+1 && data[end] == '\n' && data[end+1] == '#' {
 		// before heading
+		if beg == 0 {
+			return "", false
+		}
 		s := end + 2
 		for s < len(data) {
 			if data[s] != '#' {
@@ -257,7 +263,7 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 			// possibly after heading
 			e := beg - 1
 			s := e
-			for s > 1 {
+			for s > 0 {
 				if data[s-1] == '\n' {
 					break
 				}
@@ -270,6 +276,9 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 				found = true
 			}
 			if found {
+				if s == 0 {
+					return "", false
+				}
 				title = line
 			}
 		}

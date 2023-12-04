@@ -1,4 +1,3 @@
-
 ## References
 
 Any reference in a Markdown document may

@@ -1,6 +1,5 @@
 # Markdown Reference Generator
 
-
 This markdown reference generator uses
 a document tree with markdown files containing
 a special annotation syntax for tags and references

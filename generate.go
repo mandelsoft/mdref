@@ -70,7 +70,7 @@ func generate(files []*File, resolution Resolution, source, target string) error
 					exp := regexp.MustCompile("{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}")
 					data = exp.ReplaceAll(data, []byte(`<a id="`+k+`"></a>`))
 				} else {
-					exp := regexp.MustCompile("\n?{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}")
+					exp := regexp.MustCompile("{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}\n?")
 					data = exp.ReplaceAll(data, []byte(""))
 				}
 			}
