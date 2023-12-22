@@ -29,7 +29,7 @@ func generate(files []*File, resolution Resolution, source, target string) error
 			r.Close()
 			return fmt.Errorf("cannot read source %s", src, err)
 		}
-		if len(f.refs) == 0 && len(f.targets) == 0 {
+		if !f.HasSubst() {
 			_, err := io.Copy(w, r)
 			r.Close()
 			w.Close()

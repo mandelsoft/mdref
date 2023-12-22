@@ -37,6 +37,10 @@ type File struct {
 	commands Commands
 }
 
+func (f *File) HasSubst() bool {
+	return !(len(f.refs) == 0 && len(f.targets) == 0 && len(f.terms) == 0 && len(f.commands) == 0)
+}
+
 func (f *File) Resolve(ref string, src string) (string, string) {
 	tgt := f.targets[ref]
 	if src == f.relpath {

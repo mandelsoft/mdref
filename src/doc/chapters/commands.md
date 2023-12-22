@@ -39,7 +39,7 @@ which extracts the regular expressions used
 to parse the annotations used by this tool.
 
 ```go
-{{include}{../../../scan.go}{105:108}}
+{{include}{../../../scan.go}{109:112}}
 ```
 
 The second example uses the pattern syntax
