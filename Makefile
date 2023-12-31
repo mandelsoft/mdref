@@ -16,7 +16,17 @@ BUILD_FLAGS := "-s -w \
  -X main.gitCommit=$(COMMIT) \
  -X main.buildDate=$(NOW)"
 
-build: ${SOURCES}
+.PHONY: build
+build: bin/mdref
+	bin/mdref --list --headings src .
+
+bin/mdref: ${SOURCES}
 	mkdir -p bin
 	CGO_ENABLED=0 go build -ldflags $(BUILD_FLAGS) -o bin/mdref .
+
+.PHONY: test
+test: bin/mdref
 	bin/mdref --list --headings src .
+	diff -ur doc test/doc
+	diff README.md test/README.md
+

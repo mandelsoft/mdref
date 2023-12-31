@@ -187,11 +187,13 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 		switch key {
 		case "include":
 			cmd, err = NewInclude(line, col, m[2])
-			if err != nil {
-				return nil, nil, nil, nil, err
-			}
+		case "execute":
+			cmd, err = NewExecute(line, col, m[2])
 		default:
-			return nil, nil, nil, nil, fmt.Errorf("invalid command %q", key)
+			err = fmt.Errorf("invalid command %q", key)
+		}
+		if err != nil {
+			return nil, nil, nil, nil, err
 		}
 		cmds[string(m[0])] = cmd
 	}

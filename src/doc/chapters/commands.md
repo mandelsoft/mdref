@@ -15,9 +15,11 @@ The following commands are supported:
 The include command uses the following syntax
 <pre>
 {{include}{&lt;filepath>}[{[&lt;startline>][:[&lt;endline>]]}]}
-{{include}{&lt;filepath>}{<key>}&rcub;
+{{include}{&lt;filepath>}{&lt;key>}&rcub;
 </pre>
 
+this command included content from some file into the actual
+markdown file.
 
 In the first flavor numbering starts from 1, given start and end line are included.
 If omitted the selection starts from the beginning or is taken to the end.
@@ -32,7 +34,7 @@ parts of a Go file to provide some documentation consistent with actual
 code like in the following example
 
 <pre>
-{{include}{../../../scan.go}{105:108}&rcub;
+{{include}{../../../scan.go}{109:112}&rcub;
 </pre>
 
 which extracts the regular expressions used
@@ -51,7 +53,7 @@ to determine include content:
 
 extracts the lines between the start and end pattern
 
-```
+```go
 {{include}{../../../cmds.go}{example}}
 ```
 
@@ -70,4 +72,58 @@ using
 <pre>
 {{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
 </pre>
+
+### Execute
+
+The execute command uses the following syntax
+<pre>
+{{execute}{&lt;command>}{&lt;arg>}*}
+{{execute}{&lt;command>}{&lt;arg>}*{&lt;extract>}[{[&lt;startline>][:[&lt;endline>]]}]}
+{{execute}{&lt;command>}{&lt;arg>}*{&lt;extract>}{&lt;key>}&rcub;
+</pre>
+
+The command executes the given command with the given arguments and substitutes
+the output. Every command argument is given as separate argument to the *mdref*
+command. The directory of the file containing the command expression is used
+as current working directory to resolve relative file names.
+
+Optionally the special argument `{<extract>}` can be used to append 
+some line selection arguments according to the [`include`](#include) command, line range as well as pattern selection and the optional additional filter argument.
+
+The command in directory [`democmd`](../../democmd/main.go) outputs some
+test content:
+
+```
+{{execute}{go}{run}{../../../democmd}{text}{some demo text}}
+```
+
+It can be completely substituted (as shown above) with the command
+
+<pre>
+{{execute}{go}{run}{../../../democmd}{text}{some demo text}&rcub;
+</pre>
+
+or you can select a dedicated line range with the filter pattern
+
+<pre>
+{{execute}{go}{run}{../../../democmd}{text}{some demo text}{&lt;extract>}{text}&rcub;
+</pre>
+
+which produces the following output:
+
+```
+{{execute}{go}{run}{../../../democmd}{text}{some demo text}{<extract>}{text}}
+```
+
+A selection by a number range (here just a single line) is possible, also:
+
+<pre>
+{{execute}{go}{run}{../../../democmd}{text}{some demo text}{&lt;extract>}{5}&rcub;
+</pre>
+
+substitutes line number 5
+
+```
+{{execute}{go}{run}{../../../democmd}{text}{some demo text}{<extract>}{5}}
+```
 
