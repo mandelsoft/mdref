@@ -9,6 +9,9 @@ All commands use the same basic annotation syntax:
 
 The following commands are supported:
 
+- [`include`](#include) include content of other file
+- [`execute`](#execute) unclude output of command execution
+
 ### Include
 
 The include command uses the following syntax

@@ -59,10 +59,10 @@ func generate(files []*File, resolution Resolution, source, target string) error
 			}
 
 			for k := range f.refs {
-				exp := regexp.MustCompile("({{" + k + "}})")
+				exp := regexp.MustCompile(`\({{` + k + `}}\)`)
 
 				ref, _ := resolution.Resolve(k, f.relpath)
-				data = exp.ReplaceAll(data, []byte(ref))
+				data = exp.ReplaceAll(data, []byte("("+ref+")"))
 			}
 
 			for k, r := range f.targets {

@@ -66,7 +66,7 @@ func (i *filter) Filter(data []byte) ([]byte, error) {
 	var result []byte
 	for _, m := range matches {
 		if len(m) != 2 {
-			return nil, fmt.Errorf("regular expressin must contain one matching group")
+			return nil, fmt.Errorf("regular expression must contain one matching group")
 		}
 		result = append(result, m[1]...)
 		result = append(result, []byte(sep)...)
@@ -82,7 +82,7 @@ func (i *Include) GetSubstitution(p string) ([]byte, error) {
 
 	data, err = i.extractor.extract(data)
 	if err != nil {
-		return nil, fmt.Errorf("include file %q; %w", err)
+		return nil, fmt.Errorf("include file %q: %w", i.file, err)
 	}
 	return i.filter.Filter(data)
 }
@@ -167,7 +167,7 @@ func (i *NumExtractor) extract(data []byte) ([]byte, error) {
 		end = i.end
 	}
 	if end > len(lines) {
-		return nil, fmt.Errorf("end line %d after end of file (%d lines", end, len(lines))
+		return nil, fmt.Errorf("end line %d after end of file (%d lines)", end, len(lines))
 	}
 	return []byte(strings.Join(lines[start:end], "\n")), nil
 }

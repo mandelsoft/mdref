@@ -10,6 +10,10 @@ All commands use the same basic annotation syntax:
 
 The following commands are supported:
 
+- [`include`]({{cmd-include}}) include content of other file
+- [`execute`]({{cmd-execute}}) unclude output of command execution
+
+{{cmd-include}}
 ### Include
 
 The include command uses the following syntax
@@ -73,6 +77,7 @@ using
 {{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
 </pre>
 
+{{cmd-execute}}
 ### Execute
 
 The execute command uses the following syntax
