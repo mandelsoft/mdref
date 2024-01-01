@@ -12,7 +12,7 @@ import (
 
 type Command interface {
 	Position() string
-	GetSubstitution(path string) ([]byte, error)
+	GetSubstitution(path string, opts Options) ([]byte, error)
 }
 
 type Commands map[string]Command
@@ -74,7 +74,7 @@ func (i *filter) Filter(data []byte) ([]byte, error) {
 	return result, nil
 }
 
-func (i *Include) GetSubstitution(p string) ([]byte, error) {
+func (i *Include) GetSubstitution(p string, opts Options) ([]byte, error) {
 	data, err := i.getData(p)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ type PatternExtractor struct {
 // --- begin example ---
 // --- begin include args ---
 var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{(.*)})?)?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}(?:{(.*)})?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9 -]*)}(?:{(.*)})?$")
 
 // --- end include args ---
 // --- end example ---
@@ -225,8 +225,11 @@ type Execute struct {
 
 var _ Command = (*Execute)(nil)
 
-func (e *Execute) GetSubstitution(path string) ([]byte, error) {
+func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 
+	if opts.SkipExecute {
+		return []byte{}, nil
+	}
 	cmd := exec.Command(e.cmd[0], e.cmd[1:]...)
 	cmd.Dir = filepath.Dir(path)
 	r, err := cmd.Output()

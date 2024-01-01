@@ -61,7 +61,7 @@ extracts the lines between the start and end pattern
 ```go
 // --- begin include args ---
 var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{(.*)})?)?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z -]+)}(?:{(.*)})?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9 -]*)}(?:{(.*)})?$")
 
 // --- end include args ---
 ```

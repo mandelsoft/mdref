@@ -14,8 +14,9 @@ func (r Resolution) Resolve(ref string, src string) (string, string) {
 }
 
 type Options struct {
-	Headings bool
-	Print    bool
+	SkipExecute bool
+	Headings    bool
+	Print       bool
 }
 
 func Error(err error) {
@@ -41,10 +42,11 @@ func main() {
 			fmt.Printf("mdref {<options>} [<source dir> [<target dir>]]\n")
 			fmt.Printf(`
 Flags:
-  --version   just print the program version
-  --help      this help text
-  --headings  prefer using standard heading anchors
-  --list      print reference index and usage list
+  --version      just print the program version
+  --help         this help text
+  --headings     prefer using standard heading anchors
+  --skip-execute omit the evaluation of the execute statement (for test purposes, only)
+  --list         print reference index and usage list
 
 mdref evalates a document tree with markdown files containing logical references
 and resolves thoses refs to markdown links. The generated tree is written
@@ -63,6 +65,9 @@ printed, additionally.
 		switch args[0] {
 		case "--list":
 			opts.Print = true
+			args = args[1:]
+		case "--skip-execute":
+			opts.SkipExecute = true
 			args = args[1:]
 		case "--headings":
 			opts.Headings = true
@@ -89,14 +94,14 @@ printed, additionally.
 
 	resolution, err := resolve(files)
 	Error(err)
-	Error(checkCommands(src, files))
+	Error(checkCommands(src, files, opts))
 
 	if opts.Print {
 		Print(files, resolution)
 	}
 
 	if dst != "" {
-		err := generate(files, resolution, src, dst)
+		err := generate(files, resolution, src, dst, opts)
 		Error(err)
 	}
 }

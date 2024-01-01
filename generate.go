@@ -14,7 +14,7 @@ import (
 
 var caser = cases.Title(language.AmericanEnglish)
 
-func generate(files []*File, resolution Resolution, source, target string) error {
+func generate(files []*File, resolution Resolution, source, target string, opts Options) error {
 
 	for _, f := range files {
 		tgt := path.Join(target, f.relpath)
@@ -77,7 +77,7 @@ func generate(files []*File, resolution Resolution, source, target string) error
 
 			for k, c := range f.commands {
 				exp := regexp.MustCompile(regexp.QuoteMeta(k))
-				sub, err := c.GetSubstitution(src)
+				sub, err := c.GetSubstitution(src, opts)
 				if err != nil {
 					return fmt.Errorf("%s: %s: %s; %w", f.relpath, c.Position(), k, err)
 				}

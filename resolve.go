@@ -48,13 +48,13 @@ func resolve(files []*File) (Resolution, error) {
 	return resolution, nil
 }
 
-func checkCommands(src string, files []*File) error {
+func checkCommands(src string, files []*File, opts Options) error {
 	failed := 0
 
 	for _, f := range files {
 		p := filepath.Join(src, f.relpath)
 		for k, d := range f.commands {
-			_, err := d.GetSubstitution(p)
+			_, err := d.GetSubstitution(p, opts)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s: %s: command %q: %s\n", f.relpath, d.Position(), k, err)
 				failed++
