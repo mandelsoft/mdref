@@ -223,6 +223,7 @@ type Execute struct {
 	cmd       []string
 	filter    *filter
 	extractor extractor
+	data      []byte
 }
 
 var _ Command = (*Execute)(nil)
@@ -232,8 +233,11 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 	if opts.SkipExecute {
 		return []byte{}, nil
 	}
-	stderr := &bytes.Buffer{}
+	if e.data != nil {
+		return e.data, nil
+	}
 
+	stderr := &bytes.Buffer{}
 	cmd := exec.Command(e.cmd[0], e.cmd[1:]...)
 	cmd.Dir = filepath.Dir(path)
 	cmd.Stderr = stderr
@@ -256,6 +260,7 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 			return nil, fmt.Errorf("extract failed %v: %w", e.cmd, err)
 		}
 	}
+	e.data = r
 	return r, nil
 }
 
@@ -334,5 +339,5 @@ func NewExecute(pos Position, args []byte) (Command, error) {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
 	}
-	return &Execute{pos, cmd, &filter{fexp}, ext}, nil
+	return &Execute{pos, cmd, &filter{fexp}, ext, nil}, nil
 }
