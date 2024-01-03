@@ -33,12 +33,12 @@ The source folder may not only contain markdown files. The generator copies all 
 
 ## What it does
 
-The command scans a a folder tree for markdown file (`.md`) and processes special
+The command scans a folder tree for markdown files (`.md`) and processes special
 [annotations]({{annotations}}).
-The result is copied to a target folder keeping the original sub folder hierarchy.
+The result is copied to a target folder preserving the original sub folder hierarchy.
 Non-markdown files are just copied to the target folder tree.
 While scanning the source folder tree folders with the name `local` are ignored.
-Files contained in those folders might be used by special commands used in 
+Files contained in those folders might be used by special [{{*commands}}] used in 
 processed markdown files without being copied to the target folder hierarchy.
 
 Processing means to resolve [references]({{overview-references}}) and evaluate some

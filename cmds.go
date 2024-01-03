@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -231,10 +232,16 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 	if opts.SkipExecute {
 		return []byte{}, nil
 	}
+	stderr := &bytes.Buffer{}
+
 	cmd := exec.Command(e.cmd[0], e.cmd[1:]...)
 	cmd.Dir = filepath.Dir(path)
+	cmd.Stderr = stderr
 	r, err := cmd.Output()
 	if err != nil {
+		if len(stderr.Bytes()) > 0 {
+			return nil, fmt.Errorf("cannot execute %v: %w (%s)", e.cmd, err, stderr.String())
+		}
 		return nil, fmt.Errorf("cannot execute %v: %w", e.cmd, err)
 	}
 	if e.extractor != nil {
