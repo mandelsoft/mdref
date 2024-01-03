@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/mandelsoft/filepath/pkg/filepath"
 )
 
 type Position struct {
@@ -56,7 +57,7 @@ func (f *File) Resolve(ref string, src string) (string, string) {
 		ss = ss[1:]
 		ts = ts[1:]
 	}
-	r := path.Join(ts...)
+	r := filepath.Join(ts...)
 	for i := 1; i < len(ss); i++ {
 		r = "../" + r
 	}
@@ -74,8 +75,11 @@ func scan(src, rel string, opts Options) ([]*File, error) {
 		return nil, fmt.Errorf("%s: %w", src, err)
 	}
 	for _, e := range list {
-		rp := path.Join(rel, e.Name())
-		ep := path.Join(src, e.Name())
+		if e.Name() == "local" {
+			continue
+		}
+		rp := filepath.Join(rel, e.Name())
+		ep := filepath.Join(src, e.Name())
 		if e.IsDir() {
 			r, err := scan(ep, rp, opts)
 			if err != nil {
@@ -128,8 +132,8 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	matches, indices := info.scanFor(refExp)
 	for i, m := range matches {
 		key := string(m[1])
-		line, col := info.Position(indices[i][0])
-		refs[key] = &Ref{_Position: Position{line: line, col: col}}
+		pos := info.Position(indices[i][0])
+		refs[key] = &Ref{_Position: pos}
 	}
 
 	// term substitutions
@@ -140,17 +144,17 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 			key = key[1:]
 		}
 		key = strings.ToLower(key)
-		line, col := info.Position(indices[i][0])
-		trms[key] = &Ref{_Position: Position{line: line, col: col}}
+		pos := info.Position(indices[i][0])
+		trms[key] = &Ref{_Position: pos}
 	}
 
 	// reference targets
 	matches, indices = info.scanFor(tgtExp)
 	for i, m := range matches {
-		line, col := info.Position(indices[i][0])
+		pos := info.Position(indices[i][0])
 		key := string(m[1])
 		if _, ok := targets[key]; ok {
-			return nil, nil, nil, nil, fmt.Errorf("%d:%d: duplicate use of target %s", line, col, key)
+			return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of target %q", src, pos.Position(), key)
 		}
 
 		anchor, gen := key, true
@@ -168,7 +172,7 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 			}
 		}
 		ref := &Ref{
-			_Position: Position{line: line, col: col},
+			_Position: pos,
 			text:      string(m[3]),
 			anchor:    anchor,
 			generate:  gen,
@@ -182,18 +186,18 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	matches, indices = info.scanFor(cmdExp)
 	for i, m := range matches {
 		var cmd Command
-		line, col := info.Position(indices[i][0])
+		pos := info.Position(indices[i][0])
 		key := string(m[1])
 		switch key {
 		case "include":
-			cmd, err = NewInclude(line, col, m[2])
+			cmd, err = NewInclude(pos, m[2])
 		case "execute":
-			cmd, err = NewExecute(line, col, m[2])
+			cmd, err = NewExecute(pos, m[2])
 		default:
 			err = fmt.Errorf("invalid command %q", key)
 		}
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, fmt.Errorf("%s: %s: %w", src, pos.Position(), err)
 		}
 		cmds[string(m[0])] = cmd
 	}
@@ -218,18 +222,18 @@ func NewData(p string, data []byte) *Data {
 	return &Data{p, data, lines}
 }
 
-func (l *Data) Position(idx int) (int, int) {
+func (l *Data) Position(idx int) Position {
 	for n, i := range l.lines {
 		if idx < i {
-			return n, idx - l.lines[n-1] + 1
+			return Position{n, idx - l.lines[n-1] + 1}
 		}
 	}
-	return -1, -1
+	return Position{-1, -1}
 }
 
 func (l *Data) Location(idx int) string {
-	line, col := l.Position(idx)
-	return fmt.Sprintf("%s: %s:%s", l.relpath, line, col)
+	pos := l.Position(idx)
+	return fmt.Sprintf("%s: %s", l.relpath, pos.Position())
 }
 
 func (l *Data) scanFor(exp *regexp.Regexp) ([][][]byte, [][]int) {

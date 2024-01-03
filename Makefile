@@ -26,9 +26,8 @@ bin/mdref: ${SOURCES}
 
 .PHONY: test
 test: bin/mdref
-	bin/mdref --list --headings src .
-	diff -ur test/doc doc
-	diff test/README.md README.md
+	bin/mdref --list --headings src tmp
+	diff -ur test tmp
 
 .PHONY: gentest
 gentest: bin/mdref

@@ -15,6 +15,7 @@ func (r Resolution) Resolve(ref string, src string) (string, string) {
 
 type Options struct {
 	SkipExecute bool
+	SkipSource  bool
 	Headings    bool
 	Print       bool
 }
@@ -24,6 +25,19 @@ func Error(err error) {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
+}
+
+func Syntax() {
+	fmt.Printf("mdref {<options>} [<source dir> [<target dir>]]\n")
+	fmt.Printf(`
+Flags:
+  --version      just print the program version
+  --help         this help text
+  --headings     prefer using standard heading anchors
+  --skip-execute omit the evaluation of the execute statement (for test purposes, only)
+  --skip-source  omit source reference in generation comment
+  --list         print reference index and usage list
+`)
 }
 
 func main() {
@@ -38,19 +52,17 @@ func main() {
 			os.Exit(0)
 		}
 
+		if args[0] == "--syntax" {
+			Syntax()
+			os.Exit(0)
+		}
 		if args[0] == "--help" {
-			fmt.Printf("mdref {<options>} [<source dir> [<target dir>]]\n")
+			Syntax()
 			fmt.Printf(`
-Flags:
-  --version      just print the program version
-  --help         this help text
-  --headings     prefer using standard heading anchors
-  --skip-execute omit the evaluation of the execute statement (for test purposes, only)
-  --list         print reference index and usage list
-
 mdref evalates a document tree with markdown files containing logical references
 and resolves thoses refs to markdown links. The generated tree is written
-to a target folder.
+to a target folder. Directories with the name 'local' will be ignored.
+They may be used to provide included content not copied to the output folder.
 
 If no target directory is given, only a consistency check is done.
 If the option --headings is given, reference targets before or after
@@ -68,6 +80,9 @@ printed, additionally.
 			args = args[1:]
 		case "--skip-execute":
 			opts.SkipExecute = true
+			args = args[1:]
+		case "--skip-source":
+			opts.SkipSource = true
 			args = args[1:]
 		case "--headings":
 			opts.Headings = true

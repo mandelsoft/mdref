@@ -10,18 +10,13 @@ and anchors.
 - Never fix headings anymore with corrupting links all over the document tree
 - Never move text blocks or even complete files around in the document tree with corrupting links all over the document tree
 - Use terms all over the document tree, which are automatically linked to their explanation.
-- Provide examples documentation consistent with working code.
+- Provide example documentation consistent with working code.
+
 
 ## Command Line Syntax
 
 ```shell
-$ mdref {<option>} <source folder> [<target folder>]
-
-Flags:
-  --version   just print the program version
-  --help      print the help text
-  --headings  prefer to use standard Markown heading anchors
-  --list      print reference index and usage list 
+$ {{execute}{go}{run}{..}{--syntax}}
 ```
 
 If called without a target folder a consistency check is
@@ -36,17 +31,32 @@ and usage list is printed.
 
 The source folder may not only contain markdown files. The generator copies all non-markdown files in the same structure to the target folder.
 
+## What it does
+
+The command scans a a folder tree for markdown file (`.md`) and processes special
+[annotations]({{annotations}}).
+The result is copied to a target folder keeping the original sub folder hierarchy.
+Non-markdown files are just copied to the target folder tree.
+While scanning the source folder tree folders with the name `local` are ignored.
+Files contained in those folders might be used by special commands used in 
+processed markdown files without being copied to the target folder hierarchy.
+
+Processing means to resolve [references]({{overview-references}}) and evaluate some
+[commands]({{overview-commands}}).
+
+{{annotations}}
 ## General Annotation Syntax
 
 Annotations used by this generator use a common syntax
 
 ```
-{{<elementsyntax>}}
+{{<elementsyntax>}[{<argument>}...]}
 ```
 
 Elements may be [{{*anchor}}], [{{*term-anchor}}], [{{*reference}}] or [{{*commands}}].
 
 
+{{overview-references}}
 ## Reference and Anchor Syntax
 
 Anchors and references are character sequences
@@ -68,10 +78,14 @@ The generator supports two kinds of references as well as anchors:
 - [{{*Reference}}] 
 - [{{*Term}}]
 
+{{overview-commands}}
 ## Commands
 
 Besides the generation of consistent references among Markdown documents
 the generator also supports some useful extensions to enrich the content
 of the Markdown file.
+
+Such *commands* are described by [annotations]({{annotations}}) using
+arguments.
 
 The list of all supported commands can be found [here]({{commands}}).

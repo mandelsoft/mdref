@@ -1,4 +1,5 @@
 /.idea
 /local
 /bin
+/tmp
 *.sw[pqr]

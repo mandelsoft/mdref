@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+
+	"github.com/mandelsoft/filepath/pkg/filepath"
 )
 
 func resolve(files []*File) (Resolution, error) {
@@ -14,7 +15,7 @@ func resolve(files []*File) (Resolution, error) {
 	for _, f := range files {
 		for k, d := range f.targets {
 			if r, ok := resolution[k]; ok {
-				fmt.Fprintf(os.Stderr, "%s: %s: duplicate reference target %s in %s\n", f.relpath, d.Position(), k, r.relpath)
+				fmt.Fprintf(os.Stderr, "%s: %s: duplicate reference target %q in %s\n", f.relpath, d.Position(), k, r.relpath)
 				failed++
 			} else {
 				resolution[k] = f

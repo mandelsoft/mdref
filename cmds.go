@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/mandelsoft/filepath/pkg/filepath"
 )
 
 type Command interface {
@@ -104,7 +105,7 @@ var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9 -]*)}(?:{
 // --- end include args ---
 // --- end example ---
 
-func NewInclude(line, col int, args []byte) (Command, error) {
+func NewInclude(pos Position, args []byte) (Command, error) {
 	var err error
 
 	matches := includeExpNum.FindSubmatch(args)
@@ -135,7 +136,7 @@ func NewInclude(line, col int, args []byte) (Command, error) {
 				return nil, fmt.Errorf("invalid filter expression: %w", err)
 			}
 		}
-		return &Include{Position{line, col}, string(matches[1]), &filter{fexp}, &NumExtractor{int(start), int(end)}}, nil
+		return &Include{pos, string(matches[1]), &filter{fexp}, &NumExtractor{int(start), int(end)}}, nil
 	}
 
 	matches = includeExpPat.FindSubmatch(args)
@@ -147,7 +148,7 @@ func NewInclude(line, col int, args []byte) (Command, error) {
 				return nil, fmt.Errorf("invalid filter expression: %w", err)
 			}
 		}
-		return &Include{Position{line, col}, string(matches[1]), &filter{fexp}, &PatternExtractor{string(matches[2])}}, nil
+		return &Include{pos, string(matches[1]), &filter{fexp}, &PatternExtractor{string(matches[2])}}, nil
 	}
 
 	return nil, fmt.Errorf("invalid include arguments %q", string(args))
@@ -255,7 +256,7 @@ var nextarg = regexp.MustCompile("^{([^}]+)}(.*)$")
 var extractExpNum = regexp.MustCompile("^([0-9]+)?(?:(:)([0-9]+)?)?$")
 var extractExpPat = regexp.MustCompile("^([a-zA-Z -]+)$")
 
-func NewExecute(line, col int, args []byte) (Command, error) {
+func NewExecute(pos Position, args []byte) (Command, error) {
 	var cmd []string
 
 	for {
@@ -326,5 +327,5 @@ func NewExecute(line, col int, args []byte) (Command, error) {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
 	}
-	return &Execute{Position{line, col}, cmd, &filter{fexp}, ext}, nil
+	return &Execute{pos, cmd, &filter{fexp}, ext}, nil
 }
