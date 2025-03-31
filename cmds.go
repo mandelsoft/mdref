@@ -14,6 +14,7 @@ import (
 
 type Command interface {
 	Position() string
+	EOL() bool
 	GetSubstitution(path string, opts Options) ([]byte, error)
 }
 
@@ -23,6 +24,7 @@ type Commands map[string]Command
 
 type Include struct {
 	_Position
+	nl        bool
 	file      string
 	filter    *filter
 	extractor extractor
@@ -34,6 +36,10 @@ type extractor interface {
 
 type filter struct {
 	filter *regexp.Regexp
+}
+
+func (i *Include) EOL() bool {
+	return i.nl
 }
 
 func (i *Include) getData(p string) ([]byte, error) {
@@ -106,7 +112,7 @@ var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9 -]*)}(?:{
 // --- end include args ---
 // --- end example ---
 
-func NewInclude(pos Position, args []byte) (Command, error) {
+func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
 	var err error
 
 	matches := includeExpNum.FindSubmatch(args)
@@ -137,7 +143,7 @@ func NewInclude(pos Position, args []byte) (Command, error) {
 				return nil, fmt.Errorf("invalid filter expression: %w", err)
 			}
 		}
-		return &Include{pos, string(matches[1]), &filter{fexp}, &NumExtractor{int(start), int(end)}}, nil
+		return &Include{pos, nl, string(matches[1]), &filter{fexp}, &NumExtractor{int(start), int(end)}}, nil
 	}
 
 	matches = includeExpPat.FindSubmatch(args)
@@ -149,7 +155,7 @@ func NewInclude(pos Position, args []byte) (Command, error) {
 				return nil, fmt.Errorf("invalid filter expression: %w", err)
 			}
 		}
-		return &Include{pos, string(matches[1]), &filter{fexp}, &PatternExtractor{string(matches[2])}}, nil
+		return &Include{pos, nl, string(matches[1]), &filter{fexp}, &PatternExtractor{string(matches[2])}}, nil
 	}
 
 	return nil, fmt.Errorf("invalid include arguments %q", string(args))
@@ -220,6 +226,7 @@ func (i *PatternExtractor) match(data []byte, key string) (int, int, error) {
 
 type Execute struct {
 	_Position
+	nl        bool
 	cmd       []string
 	filter    *filter
 	extractor extractor
@@ -227,6 +234,10 @@ type Execute struct {
 }
 
 var _ Command = (*Execute)(nil)
+
+func (e *Execute) EOL() bool {
+	return e.nl
+}
 
 func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 
@@ -268,7 +279,7 @@ var nextarg = regexp.MustCompile("^{([^}]+)}(.*)$")
 var extractExpNum = regexp.MustCompile("^([0-9]+)?(?:(:)([0-9]+)?)?$")
 var extractExpPat = regexp.MustCompile("^([a-zA-Z -]+)$")
 
-func NewExecute(pos Position, args []byte) (Command, error) {
+func NewExecute(pos Position, args []byte, nl bool) (Command, error) {
 	var cmd []string
 
 	for {
@@ -339,5 +350,5 @@ func NewExecute(pos Position, args []byte) (Command, error) {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
 	}
-	return &Execute{pos, cmd, &filter{fexp}, ext, nil}, nil
+	return &Execute{pos, nl, cmd, &filter{fexp}, ext, nil}, nil
 }

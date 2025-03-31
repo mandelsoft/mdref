@@ -186,13 +186,17 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	matches, indices = info.scanFor(cmdExp)
 	for i, m := range matches {
 		var cmd Command
+		nl := false
 		pos := info.Position(indices[i][0])
 		key := string(m[1])
+		if len(info.data) > indices[i][0]+len(m[0]) {
+			nl = info.data[indices[i][0]+len(m[0])] == '\n'
+		}
 		switch key {
 		case "include":
-			cmd, err = NewInclude(pos, m[2])
+			cmd, err = NewInclude(pos, m[2], nl)
 		case "execute":
-			cmd, err = NewExecute(pos, m[2])
+			cmd, err = NewExecute(pos, m[2], nl)
 		default:
 			err = fmt.Errorf("invalid command %q", key)
 		}
