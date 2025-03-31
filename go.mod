@@ -1,6 +1,6 @@
 module github.com/mandelsoft/mdref
 
-go 1.21
+go 1.23.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1

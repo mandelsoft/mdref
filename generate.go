@@ -43,6 +43,7 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 			if err == nil && !opts.SkipSource {
 				w.Write(comment(fmt.Sprintf("from %s", rel), l))
 			}
+			w.Write([]byte("\n"))
 		}
 		if !f.HasSubst() {
 			_, err := io.Copy(w, r)
@@ -95,6 +96,9 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 				sub, err := c.GetSubstitution(src, opts)
 				if err != nil {
 					return fmt.Errorf("%s: %s: %s; %w", f.relpath, c.Position(), k, err)
+				}
+				if c.EOL() && sub[len(sub)-1] == '\n' {
+					sub = sub[:len(sub)-1]
 				}
 				data = exp.ReplaceAll(data, sub)
 			}
