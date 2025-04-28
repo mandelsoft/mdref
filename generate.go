@@ -97,7 +97,7 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 				if err != nil {
 					return fmt.Errorf("%s: %s: %s; %w", f.relpath, c.Position(), k, err)
 				}
-				if c.EOL() && sub[len(sub)-1] == '\n' {
+				if len(sub) > 0 && c.EOL() && sub[len(sub)-1] == '\n' {
 					sub = sub[:len(sub)-1]
 				}
 				data = exp.ReplaceAll(data, sub)
