@@ -18,7 +18,7 @@ BUILD_FLAGS := "-s -w \
 
 .PHONY: build
 build: bin/mdref
-	bin/mdref --list --headings src .
+	bin/mdref --list --headings --unix src .
 
 bin/mdref: ${SOURCES}
 	mkdir -p bin
@@ -26,9 +26,14 @@ bin/mdref: ${SOURCES}
 
 .PHONY: test
 test: bin/mdref
-	bin/mdref --list --headings src tmp
+	bin/mdref --list --headings --unix src tmp
+	diff -ur test tmp
+
+.PHONY: wintest
+wintest: bin/mdref
+	bin/mdref --list --headings --windows src tmp
 	diff -ur test tmp
 
 .PHONY: gentest
 gentest: bin/mdref
-	bin/mdref --list --headings src test
+	bin/mdref --list --headings --unix src test

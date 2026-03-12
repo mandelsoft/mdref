@@ -13,10 +13,18 @@ func Print(files []*File, resolution Resolution) {
 			if len(f.targets) > 0 {
 				fmt.Printf("  targets:\n")
 				for k, ref := range f.targets {
-					if ref.generate {
-						fmt.Printf("   - %s: %s\n", k, ref.text)
+					if ref.text == "" {
+						if ref.generate {
+							fmt.Printf("   - %s->%s\n", k, ref.anchor)
+						} else {
+							fmt.Printf("   - %s\n", k)
+						}
 					} else {
-						fmt.Printf("   - %s->%s: %s\n", k, ref.anchor, ref.text)
+						if ref.generate {
+							fmt.Printf("   - %s->%s[%s]\n", k, ref.anchor, ref.text)
+						} else {
+							fmt.Printf("   - %s[%s]\n", k, ref.text)
+						}
 					}
 				}
 			}
@@ -30,8 +38,8 @@ func Print(files []*File, resolution Resolution) {
 			if len(f.terms) > 0 {
 				fmt.Printf("  terms refs:\n")
 				for k, _ := range f.terms {
-					ref, str := resolution.Resolve(k, f.relpath)
-					fmt.Printf("   - %s: %s[%s]\n", k, ref, str)
+					link, ref := resolution.Resolve(k, f.relpath)
+					fmt.Printf("   - %s: %s[%s]\n", k, link, ref.text)
 				}
 			}
 			if len(f.commands) > 0 {

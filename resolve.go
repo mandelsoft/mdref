@@ -9,6 +9,7 @@ import (
 
 func resolve(files []*File) (Resolution, error) {
 	resolution := Resolution{}
+	usedTargets := map[string]struct{}{}
 
 	failed := 0
 
@@ -28,6 +29,8 @@ func resolve(files []*File) (Resolution, error) {
 			if resolution[k] == nil {
 				fmt.Fprintf(os.Stderr, "%s: %s reference %q not found\n", f.relpath, d.Position(), k)
 				failed++
+			} else {
+				usedTargets[k] = struct{}{}
 			}
 		}
 		for k, d := range f.terms {
@@ -35,7 +38,8 @@ func resolve(files []*File) (Resolution, error) {
 				fmt.Fprintf(os.Stderr, "%s: %s: term reference %q not found\n", f.relpath, d.Position(), k)
 				failed++
 			} else {
-				if r.targets[k].text == "" {
+				t := r.targets[k]
+				if t.text == "" {
 					fmt.Fprintf(os.Stderr, "%s: %s: term anchor %q in %s without term\n", f.relpath, d.Position(), k, r.relpath)
 					failed++
 				}
@@ -46,6 +50,15 @@ func resolve(files []*File) (Resolution, error) {
 	if failed > 0 {
 		return nil, fmt.Errorf("failed with %d resolution error(s)", failed)
 	}
+
+	for _, f := range files {
+		for k, d := range f.targets {
+			if _, ok := usedTargets[k]; !ok {
+				d.generate = false
+			}
+		}
+	}
+
 	return resolution, nil
 }
 

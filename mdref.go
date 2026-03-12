@@ -8,7 +8,7 @@ import (
 
 type Resolution map[string]*File
 
-func (r Resolution) Resolve(ref string, src string) (string, string) {
+func (r Resolution) Resolve(ref string, src string) (string, *Ref) {
 	f := r[ref]
 	return f.Resolve(ref, src)
 }
@@ -18,6 +18,8 @@ type Options struct {
 	SkipSource  bool
 	Headings    bool
 	Print       bool
+	Windows     bool
+	Unix        bool
 }
 
 func Error(err error) {
@@ -37,6 +39,8 @@ Flags:
   --skip-execute omit the evaluation of the execute statement (for test purposes, only)
   --skip-source  omit source reference in generation comment
   --list         print reference index and usage list
+  --windows      convert to windows file endings (default: use as is)
+  --unix         convert to unix file endings
 `)
 }
 
@@ -87,12 +91,24 @@ printed, additionally.
 		case "--headings":
 			opts.Headings = true
 			args = args[1:]
+		case "--unix":
+			if opts.Windows {
+				Error(fmt.Errorf("only one of --unix or --windows possible"))
+			}
+			opts.Unix = true
+			args = args[1:]
+		case "--windows":
+			if opts.Unix {
+				Error(fmt.Errorf("only one of --unix or --windows possible"))
+			}
+			opts.Windows = true
+			args = args[1:]
 		default:
 			Error(fmt.Errorf("invalid option %q", args[0]))
 		}
 	}
 	if len(args) > 2 {
-		fmt.Printf("use mdref [--liat] [<source> [<target>]]")
+		fmt.Printf("use mdref [<options>] [<source> [<target>]]\n")
 		os.Exit(1)
 	}
 	src := "."
@@ -104,7 +120,11 @@ printed, additionally.
 		dst = args[1]
 	}
 
+	err := prescan(src, "", opts)
+	Error(err)
+
 	files, err := scan(src, "", opts)
+	
 	Error(err)
 
 	resolution, err := resolve(files)

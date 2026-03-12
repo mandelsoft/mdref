@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html"
 	"os"
 	"regexp"
 	"strings"
@@ -21,11 +23,71 @@ func (r *Position) Position() string {
 
 type _Position = Position
 
+type Format struct {
+	begin string
+	end   string
+}
+
+var formats = map[string]*Format{
+	"":  {"", ""},
+	"*": {"**", "**"},
+	"_": {"_", "_"},
+	"`": {"<code>", "</code>"},
+}
+
 type Ref struct {
 	_Position
+	raw      []byte
+	format   string
 	text     string
 	anchor   string
 	generate bool
+}
+
+func (r *Ref) Raw() []byte {
+	raw := r.raw
+	if r.generate {
+		return bytes.Trim(raw, "\n")
+	}
+	if raw[0] == '\n' && raw[len(raw)-1] == '\n' {
+		return raw[:len(raw)-1]
+	}
+	return raw
+}
+
+func (r *Ref) Format(s string) string {
+	if r == nil {
+		return s
+	}
+	return formats[r.format].begin + mdescape(s) + formats[r.format].end
+}
+
+func (r *Ref) Plural(s string) string {
+	if r == nil {
+		return Plural(s)
+	}
+	if r.format == "`" {
+		return r.Format(s) + "s"
+	}
+	return r.Format(Plural(s))
+}
+
+func (r *Ref) AsFormatted() string {
+	if r == nil {
+		return ""
+	}
+	return r.Format(r.text)
+}
+
+func (r *Ref) AsUpper() string {
+	return strings.ToUpper(r.text[:1]) + r.text[1:]
+}
+
+func (r *Ref) AsPlural() string {
+	if r == nil {
+		return ""
+	}
+	return r.Plural(r.text)
 }
 
 type Refs map[string]*Ref
@@ -42,10 +104,10 @@ func (f *File) HasSubst() bool {
 	return !(len(f.refs) == 0 && len(f.targets) == 0 && len(f.terms) == 0 && len(f.commands) == 0)
 }
 
-func (f *File) Resolve(ref string, src string) (string, string) {
+func (f *File) Resolve(ref string, src string) (string, *Ref) {
 	tgt := f.targets[ref]
 	if src == f.relpath {
-		return "#" + tgt.anchor, tgt.text
+		return "#" + tgt.anchor, tgt
 	}
 
 	ss := strings.Split(src, "/")
@@ -62,9 +124,67 @@ func (f *File) Resolve(ref string, src string) (string, string) {
 		r = "../" + r
 	}
 	if tgt.anchor != "" {
-		return r + "#" + tgt.anchor, tgt.text
+		return r + "#" + tgt.anchor, tgt
 	}
-	return r, tgt.text
+	return r, tgt
+}
+
+func prescan(src, rel string, opts Options) error {
+	list, err := os.ReadDir(src)
+	if err != nil {
+		return fmt.Errorf("%s: %w", src, err)
+	}
+	for _, e := range list {
+		if e.Name() == "local" {
+			continue
+		}
+		rp := filepath.Join(rel, e.Name())
+		ep := filepath.Join(src, e.Name())
+		if e.IsDir() {
+			err := prescan(ep, rp, opts)
+			if err != nil {
+				return err
+			}
+		} else {
+			if strings.HasSuffix(e.Name(), ".md") {
+				err = scanDefs(ep, opts)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func scanDefs(src string, opts Options) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("cannot read %s: %w", src, err)
+	}
+	data, _ = normalizeLineEndings(data)
+	info := NewData(src, data)
+
+	// commands
+	matches, indices := info.scanFor(cmdExp)
+	for i, m := range matches {
+		ok := acceptAnchor(data, indices[i][0], indices[i][1])
+		if !ok {
+			continue
+		}
+		pos := info.Position(indices[i][0])
+		key := string(m[1])
+
+		switch key {
+		case "pattern":
+			_, err = NewPattern(pos, m[2], true)
+		default:
+		}
+		if err != nil {
+			return fmt.Errorf("%s: %s: %w", src, pos.Position(), err)
+		}
+	}
+	return nil
 }
 
 func scan(src, rel string, opts Options) ([]*File, error) {
@@ -110,10 +230,17 @@ func scan(src, rel string, opts Options) ([]*File, error) {
 	return result, nil
 }
 
-var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
-var trmExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
-var tgtExp = regexp.MustCompile(`(?:^|[^([]){{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
-var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]+})+)}`)
+func normalizeLineEndings(data []byte) ([]byte, bool) {
+	r := bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
+	return r, len(r) != len(data)
+}
+
+func toLineEndings(data []byte, win bool, opts Options) []byte {
+	if (win && !opts.Unix) || opts.Windows {
+		return bytes.ReplaceAll(data, []byte("\n"), []byte("\r\n"))
+	}
+	return data
+}
 
 func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	standard := map[string]struct{}{}
@@ -125,6 +252,7 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("cannot read %s: %w", src, err)
 	}
+	data, _ = normalizeLineEndings(data)
 
 	info := NewData(src, data)
 
@@ -137,46 +265,43 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	}
 
 	// term substitutions
-	matches, indices = info.scanFor(trmExp)
+	matches, indices = info.scanFor(subExp)
 	for i, m := range matches {
-		key := string(m[1])
-		if strings.HasPrefix(key, "*") {
-			key = key[1:]
+		if !acceptMatch(data, indices[i][0], indices[i][1]) {
+			continue
 		}
-		key = strings.ToLower(key)
+		key := normKey(string(m[1]))
 		pos := info.Position(indices[i][0])
 		trms[key] = &Ref{_Position: pos}
 	}
 
-	// reference targets
+	// term links
+	matches, indices = info.scanFor(lnkExp)
+	for i, m := range matches {
+		key := normKey(string(m[1]))
+		pos := info.Position(indices[i][0])
+		r := trms[key]
+		if r != nil {
+			r.generate = true
+		} else {
+			trms[key] = &Ref{_Position: pos, generate: true}
+		}
+	}
+
+	// anchors
 	matches, indices = info.scanFor(tgtExp)
 	for i, m := range matches {
+		ok, beg, end := adjustAnchor(data, indices[i][0], indices[i][1])
+		if !ok {
+			continue
+		}
 		pos := info.Position(indices[i][0])
 		key := string(m[1])
 		if _, ok := targets[key]; ok {
 			return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of target %q", src, pos.Position(), key)
 		}
 
-		anchor, gen := key, true
-		if opts.Headings {
-			anchor, gen = determineAnchor(data, indices[i][0], indices[i][1], key)
-			if !gen {
-				if _, ok := standard[anchor]; ok {
-					// similar heading used twice in document
-					// fall back to anchor generation
-					gen = true
-					anchor = key
-				} else {
-					standard[anchor] = struct{}{}
-				}
-			}
-		}
-		ref := &Ref{
-			_Position: pos,
-			text:      string(m[3]),
-			anchor:    anchor,
-			generate:  gen,
-		}
+		ref := createAnchor(opts, data, pos, beg, end, key, string(m[3]), standard)
 		targets[key] = ref
 	}
 
@@ -186,27 +311,143 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 	matches, indices = info.scanFor(cmdExp)
 	for i, m := range matches {
 		var cmd Command
-		nl := false
+		ok, beg, end := adjustAnchor(data, indices[i][0], indices[i][1])
+		if !ok {
+			continue
+		}
 		pos := info.Position(indices[i][0])
 		key := string(m[1])
-		if len(info.data) > indices[i][0]+len(m[0]) {
-			nl = info.data[indices[i][0]+len(m[0])] == '\n'
-		}
+
 		switch key {
-		case "include":
-			cmd, err = NewInclude(pos, m[2], nl)
-		case "execute":
-			cmd, err = NewExecute(pos, m[2], nl)
+		case "pattern":
+			cmd, err = NewPattern(pos, m[2], data[end-1] == '\n')
+		case "term":
+			var term string
+			var ref *Ref
+			term, ref, err = ParseTerm(src, pos, data, beg, end, m[2], standard, opts)
+			if ref != nil {
+				if targets[term] != nil {
+					return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of term %q", src, pos.Position(), term)
+				}
+				targets[term] = ref
+				continue
+			}
 		default:
-			err = fmt.Errorf("invalid command %q", key)
+			cmd, err = parseSubstCmd(key, pos, m[2], data[end-1] == '\n')
 		}
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%s: %s: %w", src, pos.Position(), err)
 		}
-		cmds[string(m[0])] = cmd
+		cmds[strings.TrimSpace(string(m[0]))] = cmd
 	}
 
 	return refs, trms, targets, cmds, nil
+}
+
+func adjustAnchor(data []byte, beg, end int) (bool, int, int) {
+	if !acceptAnchor(data, beg, end) {
+		return false, beg, end
+	}
+
+	if beg > 0 {
+		if data[beg-1] == '\n' {
+			beg--
+		}
+	}
+	if end < len(data) {
+		if data[end] == '\n' {
+			end++
+		}
+	}
+	return true, beg, end
+}
+
+func acceptMatch(data []byte, beg, end int) bool {
+	if data[beg] != '{' || beg == 0 {
+		return true
+	}
+	if data[beg-1] == '{' {
+		return false
+	}
+	if end >= len(data) {
+		return true
+	}
+	if data[end] == '}' {
+		return false
+	}
+	return true
+}
+
+func acceptAnchor(data []byte, beg, end int) bool {
+	if beg == 0 {
+		return true
+	}
+	match := string(data[beg:end])
+	_ = match
+	if data[beg-1] == '[' || data[beg-1] == '(' || data[beg-1] == '{' {
+		return false
+	}
+	if end >= len(data) {
+		return true
+	}
+	if data[end] == '}' {
+		return false
+	}
+	return true
+}
+
+func parseSubstCmd(key string, pos Position, def []byte, nl bool) (Command, error) {
+	var cmd Command
+	var err error
+	switch key {
+	case "include":
+		cmd, err = NewInclude(pos, def, nl)
+	case "execute":
+		cmd, err = NewExecute(pos, def, nl)
+	default:
+		err = fmt.Errorf("invalid command %q", key)
+	}
+	return cmd, err
+}
+
+func createAnchor(opts Options, data []byte, pos Position, begin, end int, key string, text string, standard map[string]struct{}) *Ref {
+	anchor, gen := key, true
+	if opts.Headings {
+		anchor, gen = determineAnchor(data, begin, end, key)
+		if !gen {
+			if _, ok := standard[anchor]; ok {
+				// similar heading used twice in document
+				// fall back to anchor generation
+				gen = true
+				anchor = key
+			} else {
+				standard[anchor] = struct{}{}
+			}
+		}
+	}
+
+	return &Ref{
+		_Position: pos,
+		raw:       data[begin:end],
+		text:      text,
+		anchor:    anchor,
+		generate:  gen,
+	}
+}
+
+func isEOL(data []byte, last int) bool {
+	nl := false
+	if len(data) > last {
+		nl = data[last] == '\n'
+	}
+	return nl
+}
+
+func normKey(key string) string {
+	if strings.HasPrefix(key, "*") {
+		key = key[1:]
+	}
+	return strings.ToLower(key[0:1]) + key[1:]
 }
 
 type Data struct {
@@ -232,7 +473,7 @@ func (l *Data) Position(idx int) Position {
 			return Position{n, idx - l.lines[n-1] + 1}
 		}
 	}
-	return Position{-1, -1}
+	return Position{len(l.lines), idx - l.lines[len(l.lines)-1] + 1}
 }
 
 func (l *Data) Location(idx int) string {
@@ -244,17 +485,22 @@ func (l *Data) scanFor(exp *regexp.Regexp) ([][][]byte, [][]int) {
 	return exp.FindAllSubmatch(l.data, -1), exp.FindAllIndex(l.data, -1)
 }
 
-func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
-	if data[beg] != '{' {
-		beg++
+func first(data []byte, pos int) bool {
+	if pos == 0 && data[pos] == '{' {
+		return true
 	}
+	return strings.TrimSpace(string(data[:pos])) == ""
+}
+
+func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 	var title []byte
-	if len(data) > end+1 && data[end] == '\n' && data[end+1] == '#' {
+	if len(data) > end && data[end-1] == '\n' && data[end] == '#' {
 		// before heading
-		if beg == 0 {
+		if first(data, beg) {
 			return "", false
 		}
-		s := end + 2
+		s := end + 1
+		// skip section depth
 		for s < len(data) {
 			if data[s] != '#' {
 				break
@@ -262,21 +508,22 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 			s++
 		}
 		e := s
+		// look for end of title line
 		for e < len(data) {
 			if data[e] == '\n' {
 				break
 			}
 			e++
-
 		}
 		if s < len(data) {
 			title = data[s:e]
 		}
 	} else {
-		if beg > 0 && data[beg-1] == '\n' {
+		if data[beg] == '\n' {
 			// possibly after heading
 			e := beg - 1
 			s := e
+			// get previous line
 			for s > 0 {
 				if data[s-1] == '\n' {
 					break
@@ -290,7 +537,7 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 				found = true
 			}
 			if found {
-				if s == 0 {
+				if first(data, s) {
 					return "", false
 				}
 				title = line
@@ -312,4 +559,49 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 		return l, false
 	}
 	return def, true
+}
+
+var termCmd = regexp.MustCompile("^{([`*_]?)([a-z][a-zA-Z0-9-_]+)}{([a-z]+)}((?:{[^{}]+})+)$")
+
+// --- begin symbol ---
+
+func ParseTerm(path string, pos Position, data []byte, begin, end int, args []byte, standard map[string]struct{}, opts Options) (string, *Ref, error) {
+	matches := termCmd.FindSubmatch(args)
+	if len(matches) != 0 {
+		qual := string(matches[1])
+		name := strings.TrimSpace(string(matches[2]))
+		key := string(matches[3])
+		def := matches[4]
+
+		switch qual {
+		case "*":
+			qual = "**"
+		}
+		incl, err := parseSubstCmd(key, pos, def, true)
+		if err != nil {
+			return "", nil, fmt.Errorf("term %q: %w", name, err)
+		}
+		tdata, err := incl.GetSubstitution(path, Options{})
+		if err != nil {
+			return "", nil, fmt.Errorf("cannot extract term %q: %w", name, err)
+		}
+		text := strings.TrimSpace(string(tdata))
+		// fmt.Printf("identifier %q=%q\n", name, value)
+
+		ref := createAnchor(opts, data, pos, begin, end, name, text, standard)
+		ref.format = qual
+		return name, ref, nil
+	}
+
+	return "", nil, fmt.Errorf("invalid term arguments %q", string(args))
+}
+
+// --- end symbol ---
+
+func mdescape(s string) string {
+	s = html.EscapeString(s)
+	s = strings.Replace(s, `*`, `&ast;`, -1)
+	s = strings.Replace(s, `_`, `&lowbar;`, -1)
+	s = strings.Replace(s, "`", `&grave;`, -1)
+	return s
 }

@@ -40,16 +40,17 @@ parts of a Go file to provide some documentation consistent with actual
 code like in the following example
 
 <pre>
-{{include}{../../../scan.go}{113:116}&rcub;
+{{include}{../../../patterns.go}{7:11}&rcub;
 </pre>
 
 which extracts the regular expressions used
 to parse the annotations used by this tool.
 
 ```go
+var subExp = regexp.MustCompile(`{{{([*]?[A-Za-z][a-z0-9.-]+)}}}`)
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
-var trmExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
-var tgtExp = regexp.MustCompile(`(?:^|[^([]){{([a-z][a-z0-9.-]*)(:([a-zA-Z][a-zA-Z0-9- ]+))?}}`)
+var lnkExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
+var tgtExp = regexp.MustCompile(`{{([a-z][a-z0-9.-]*)(:([a-zA-Z][\p{L}\p{N}- ]+))?}}`)
 var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]+})+)}`)
 ```
 
@@ -95,6 +96,14 @@ using
 <pre>
 {{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
 </pre>
+
+If some special character like `{` or `}` are required 
+in the regukar expression, they must be encoded a HTML entities: for example
+
+- <code>&lcub;</code>: &amp;lcub;
+- <code>&rcub;</code>: &amp;rcub;
+
+There are some [standard pattern](terms.md#term-extraction-pattern) defined as part of the *mdref* tool. Additional patterns can be defined with the [`pattern` command](terms.md#pattern-definition).
 
 ### Execute
 

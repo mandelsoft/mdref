@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"os"
 	"os/exec"
 	"regexp"
@@ -23,8 +24,7 @@ type Commands map[string]Command
 ////////////////////////////////////////////////////////////////////////////////
 
 type Include struct {
-	_Position
-	nl        bool
+	Empty
 	file      string
 	filter    *filter
 	extractor extractor
@@ -36,6 +36,23 @@ type extractor interface {
 
 type filter struct {
 	filter *regexp.Regexp
+}
+
+func NewFilter(def []byte) (*filter, error) {
+	var err error
+	if def == nil {
+		return nil, nil
+	}
+
+	fexp := FilterPattern[string(def)]
+	if fexp == nil {
+		s := html.UnescapeString(string(def))
+		fexp, err = regexp.Compile(s)
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter expression %q: %w", s, err)
+		}
+	}
+	return &filter{fexp}, nil
 }
 
 func (i *Include) EOL() bool {
@@ -63,7 +80,7 @@ func (i *Include) getData(p string) ([]byte, error) {
 // --- end filter ---
 
 func (i *filter) Filter(data []byte) ([]byte, error) {
-	if i.filter == nil {
+	if i == nil || i.filter == nil {
 		return data, nil
 	}
 	sep := ""
@@ -136,26 +153,22 @@ func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
 				end = 0
 			}
 		}
-		var fexp *regexp.Regexp
-		if matches[5] != nil {
-			fexp, err = regexp.Compile(string(matches[5]))
-			if err != nil {
-				return nil, fmt.Errorf("invalid filter expression: %w", err)
-			}
+		var filter *filter
+		filter, err = NewFilter(matches[5])
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
-		return &Include{pos, nl, string(matches[1]), &filter{fexp}, &NumExtractor{int(start), int(end)}}, nil
+		return &Include{Empty{pos, nl}, string(matches[1]), filter, &NumExtractor{int(start), int(end)}}, nil
 	}
 
 	matches = includeExpPat.FindSubmatch(args)
 	if len(matches) != 0 {
-		var fexp *regexp.Regexp
-		if matches[3] != nil {
-			fexp, err = regexp.Compile(string(matches[3]))
-			if err != nil {
-				return nil, fmt.Errorf("invalid filter expression: %w", err)
-			}
+		var filter *filter
+		filter, err = NewFilter(matches[3])
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
-		return &Include{pos, nl, string(matches[1]), &filter{fexp}, &PatternExtractor{string(matches[2])}}, nil
+		return &Include{Empty{pos, nl}, string(matches[1]), filter, &PatternExtractor{string(matches[2])}}, nil
 	}
 
 	return nil, fmt.Errorf("invalid include arguments %q", string(args))
@@ -225,8 +238,7 @@ func (i *PatternExtractor) match(data []byte, key string) (int, int, error) {
 ////////////////////////////////////////////////////////////////////////////////
 
 type Execute struct {
-	_Position
-	nl        bool
+	Empty
 	cmd       []string
 	filter    *filter
 	extractor extractor
@@ -343,12 +355,52 @@ func NewExecute(pos Position, args []byte, nl bool) (Command, error) {
 		}
 	}
 
-	var fexp *regexp.Regexp
+	var filter *filter
 	if len(extract) == 2 {
-		fexp, err = regexp.Compile(string(extract[1]))
+		filter, err = NewFilter([]byte(extract[1]))
 		if err != nil {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
 	}
-	return &Execute{pos, nl, cmd, &filter{fexp}, ext, nil}, nil
+	return &Execute{Empty{pos, nl}, cmd, filter, ext, nil}, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type Empty struct {
+	_Position
+	nl bool
+}
+
+var _ Command = (*Empty)(nil)
+
+func (e *Empty) EOL() bool {
+	return e.nl
+}
+
+func (e *Empty) GetSubstitution(path string, opts Options) ([]byte, error) {
+	return nil, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+var patternExp = regexp.MustCompile("^{([(a-z][a-z.-]*)}{([^}]+)}$")
+
+func NewPattern(pos Position, args []byte, nl bool) (Command, error) {
+	m := patternExp.FindSubmatch(args)
+	if m == nil {
+		return nil, fmt.Errorf("invalid pattern arguments")
+	}
+
+	name := string(m[1])
+	pat := html.UnescapeString(string(m[2]))
+
+	exp, err := regexp.Compile(pat)
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid regular expression %q: %w", pat, err)
+	}
+
+	FilterPattern[name] = exp
+	return &Empty{pos, true}, nil
 }

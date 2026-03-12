@@ -7,7 +7,6 @@
 Any reference in a Markdown document may
 use the annotated reference syntax to refer to a global logical anchors.
 
-
 <pre>
 {{&lt;name>}}
 </pre>

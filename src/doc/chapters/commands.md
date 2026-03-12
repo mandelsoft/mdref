@@ -13,7 +13,7 @@ The following commands are supported:
 - [`include`]({{cmd-include}}) include content of other file
 - [`execute`]({{cmd-execute}}) unclude output of command execution
 
-{{cmd-include}}
+{{cmd-include:include}}
 ### Include
 
 The include command uses the following syntax
@@ -38,14 +38,14 @@ parts of a Go file to provide some documentation consistent with actual
 code like in the following example
 
 <pre>
-{{include}{../../../scan.go}{113:116}&rcub;
+{{include}{../../../patterns.go}{7:11}&rcub;
 </pre>
 
 which extracts the regular expressions used
 to parse the annotations used by this tool.
 
 ```go
-{{include}{../../../scan.go}{113:116}}
+{{include}{../../../patterns.go}{7:11}}
 ```
 
 The second example uses the pattern syntax
@@ -77,7 +77,15 @@ using
 {{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
 </pre>
 
-{{cmd-execute}}
+If some special character like `{` or `}` are required 
+in the regukar expression, they must be encoded a HTML entities: for example
+
+- <code>&lcub;</code>: &amp;lcub;
+- <code>&rcub;</code>: &amp;rcub;
+
+There are some [standard pattern]({{term-pattern}}) defined as part of the *mdref* tool. Additional patterns can be defined with the [`pattern` command]({{cmd-pattern}}).
+
+{{cmd-execute:execute}}
 ### Execute
 
 The execute command uses the following syntax

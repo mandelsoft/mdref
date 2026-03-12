@@ -29,6 +29,8 @@ Flags:
   --skip-execute omit the evaluation of the execute statement (for test purposes, only)
   --skip-source  omit source reference in generation comment
   --list         print reference index and usage list
+  --windows      convert to windows file endings (default: use as is)
+  --unix         convert to unix file endings
 ```
 
 If called without a target folder a consistency check is
@@ -64,7 +66,7 @@ Annotations used by this generator use a common syntax
 {{<elementsyntax>}[{<argument>}...]}
 ```
 
-Elements may be [anchors](doc/chapters/references.md#anchors), [term anchors](doc/chapters/terms.md#anchors), [references](doc/chapters/references.md) or [commands](doc/chapters/commands.md).
+Elements may be [logical anchors](doc/chapters/references.md#anchors), [term anchors](doc/chapters/terms.md#term-anchors), [logical references](doc/chapters/references.md) or [commands](doc/chapters/commands.md).
 
 
 ## Reference and Anchor Syntax
@@ -85,7 +87,7 @@ Therefore, the anchors must be globally unique in the
 complete document tree.
 
 The generator supports two kinds of references as well as anchors:
-- [References](doc/chapters/references.md) 
+- [Logical references](doc/chapters/references.md) 
 - [Terms](doc/chapters/terms.md)
 
 ## Commands

@@ -1,9 +1,8 @@
-{{reference:reference}}
+{{reference:logical reference}}
 ## References
 
 Any reference in a Markdown document may
 use the annotated reference syntax to refer to a global logical anchors.
-
 
 <pre>
 {{&lt;name>}}
@@ -19,7 +18,7 @@ A typical link, like the one above, looks like this:
 </pre>
 
 
-{{anchor:anchor}}
+{{anchor:logical anchor}}
 ### Anchors
 
 Anchors are just defined by using the reference syntax outside the Markdown reference syntax.
