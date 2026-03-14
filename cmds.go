@@ -76,12 +76,14 @@ func (i *Include) getData(p string) ([]byte, error) {
 var regexpcfg = myregexp.NewSettings('(', ')', '/')
 
 // --- begin filter ---
-// An optional third argument can be used to specify a filter regular
-// expression. It must contain one matching group. The
-// selected file range is matched by this regular expression and
-// the content of the first matching group of the all matches is
+// An optional additional such filter argument can be used to specify a
+// filter regular expression. The selected
+// file range is matched by this regular expression and
+// the matched content of the all matches is
 // concatenated. If the expression uses the multi-line mode, the matches
 // are suffixed with a newline.
+// If the expression conitains exactly one capturing group, the matched
+// content for this group is taken.
 // --- end filter ---
 
 func (i *filter) Filter(data []byte) ([]byte, error) {
@@ -220,7 +222,6 @@ func (i *PatternExtractor) extract(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return data[start:end], nil
 }
 

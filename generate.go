@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/mandelsoft/filepath/pkg/filepath"
@@ -89,32 +88,34 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 				if opts.Windows {
 					win = true
 				}
+				substitutions := Substitutions{}
+
 				for k := range f.terms {
 					ref, term := resolution.Resolve(k, f.relpath)
 
-					data = substituteTerm(data, k, `{{{%s}}}`, term, "%s")
-					data = substituteTerm(data, k, `[{{%s}}]`, term, fmt.Sprintf("[%%s](%s)", ref))
+					data = substituteTerm(substitutions, data, k, `{{{%s}}}`, term, "%s")
+					data = substituteTerm(substitutions, data, k, `[{{%s}}]`, term, fmt.Sprintf("[%%s](%s)", ref))
 				}
 
 				for k := range f.refs {
 					ref, _ := resolution.Resolve(k, f.relpath)
-					data = substituteTerm(data, k, `({{%s}})`, nil, fmt.Sprintf("(%s)", ref), false)
+					data = substituteTerm(substitutions, data, k, `({{%s}})`, nil, fmt.Sprintf("(%s)", ref), false)
 				}
 
 				for k, r := range f.targets {
 					if r.generate {
-						data = bytes.ReplaceAll(data, r.Raw(), []byte("<a id=\""+k+"\"></a>"))
+						data = substitutions.ReplaceAll(data, r.Raw(), []byte("<a id=\""+k+"\"></a>"))
 						// exp := regexp.MustCompile("{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}")
 						// data = exp.ReplaceAll(data, []byte(`<a id="`+k+`"></a>`))
 					} else {
-						data = bytes.ReplaceAll(data, r.Raw(), []byte{})
+						data = substitutions.ReplaceAll(data, r.Raw(), []byte{})
 						// exp := regexp.MustCompile("{{" + k + "(:[a-zA-Z][a-zA-Z0-9- ]+)?}}\n?")
 						// data = exp.ReplaceAll(data, []byte(""))
 					}
 				}
 
 				for k, c := range f.commands {
-					exp := regexp.MustCompile(regexp.QuoteMeta(k))
+					// exp := regexp.MustCompile(regexp.QuoteMeta(k))
 					sub, err := c.GetSubstitution(src, opts)
 					if err != nil {
 						return fmt.Errorf("%s: %s: %s; %w", f.relpath, c.Position(), k, err)
@@ -122,8 +123,22 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 					if len(sub) > 0 && c.EOL() && sub[len(sub)-1] == '\n' {
 						sub = sub[:len(sub)-1]
 					}
-					data = exp.ReplaceAll(data, sub)
+					data = substitutions.ReplaceAll(data, []byte(k), sub)
 				}
+
+				/*
+					if filepath.Base(f.relpath) == "commands.md" {
+						fmt.Printf("*** substitutions: \n")
+						for k, v := range substitutions {
+							fmt.Printf("- %q:\n", k)
+							fmt.Printf("  %s\n", bytes.ReplaceAll(v, []byte("\n"), []byte("\n  ")))
+						}
+						fmt.Printf("*** data: \n")
+						fmt.Printf("  %s\n", bytes.ReplaceAll(data, []byte("\n"), []byte("\n  ")))
+						fmt.Printf("***********\n")
+					}
+				*/
+				data = substitutions.Finalize(data)
 
 				data = append(header, data...)
 				_, err = w.Write(toLineEndings(data, win, opts))
@@ -145,17 +160,42 @@ func formatTerm(msg, term string) string {
 	return msg
 }
 
-func substituteTerm(data []byte, key string, kformat string, term *Ref, tformat string, flavors ...bool) []byte {
-	data = bytes.ReplaceAll(data, []byte(fmt.Sprintf(kformat, key)), []byte(formatTerm(tformat, term.AsFormatted())))
+// Substitutions delays remembers substitutions
+// by introducing a temporary substitution marker.
+// When calling Finalize, all registered substitutions
+// are executed based on the substitution markers.
+// This indirection is required to avoid
+// substitutions in already substituted document parts.
+// Assumptions: marker syntax in nor used in substitutions.
+type Substitutions map[string][]byte
+
+func (s Substitutions) ReplaceAll(data []byte, src []byte, dst []byte) []byte {
+	key := fmt.Sprintf("<!--**subst key: %5x**-->", len(s))
+	s[key] = dst
+	/*
+	 */
+	return bytes.ReplaceAll(data, src, []byte(key))
+	// return bytes.ReplaceAll(data, src, dst)
+}
+
+func (s Substitutions) Finalize(data []byte) []byte {
+	for k, v := range s {
+		data = bytes.ReplaceAll(data, []byte(k), v)
+	}
+	return data
+}
+
+func substituteTerm(substitutions Substitutions, data []byte, key string, kformat string, term *Ref, tformat string, flavors ...bool) []byte {
+	data = substitutions.ReplaceAll(data, []byte(fmt.Sprintf(kformat, key)), []byte(formatTerm(tformat, term.AsFormatted())))
 
 	if len(flavors) == 0 || flavors[0] {
-		data = bytes.ReplaceAll(data, []byte(fmt.Sprintf(kformat, "*"+key)), []byte(formatTerm(tformat, term.AsPlural())))
+		data = substitutions.ReplaceAll(data, []byte(fmt.Sprintf(kformat, "*"+key)), []byte(formatTerm(tformat, term.AsPlural())))
 
 		t := term.AsUpper()
 		key = strings.ToUpper(key[:1]) + key[1:]
 
-		data = bytes.ReplaceAll(data, []byte(fmt.Sprintf(kformat, key)), []byte(formatTerm(tformat, term.Format(t))))
-		data = bytes.ReplaceAll(data, []byte(fmt.Sprintf(kformat, "*"+key)), []byte(formatTerm(tformat, term.Plural(t))))
+		data = substitutions.ReplaceAll(data, []byte(fmt.Sprintf(kformat, key)), []byte(formatTerm(tformat, term.Format(t))))
+		data = substitutions.ReplaceAll(data, []byte(fmt.Sprintf(kformat, "*"+key)), []byte(formatTerm(tformat, term.Plural(t))))
 	}
 
 	return data

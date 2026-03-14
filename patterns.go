@@ -8,7 +8,7 @@ var subExp = regexp.MustCompile(`{{{([*]?[A-Za-z][a-z0-9.-]+)}}}`)
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var lnkExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
 var tgtExp = regexp.MustCompile(`{{([a-z][a-z0-9.-]*)(:([a-zA-Z][\p{L}\p{N}- ]+))?}}`)
-var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]+})+)}`)
+var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]*})+)}`)
 
 var FilterPattern = map[string]*regexp.Regexp{}
 

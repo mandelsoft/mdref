@@ -1,0 +1,4 @@
+
+If sub-sequent arguments should be used without
+a line filter it is possible to use `{:}` to select
+all lines.

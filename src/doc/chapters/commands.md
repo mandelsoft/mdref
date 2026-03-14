@@ -11,7 +11,7 @@ All commands use the same basic annotation syntax:
 The following commands are supported:
 
 - [`include`]({{cmd-include}}) include content of other file
-- [`execute`]({{cmd-execute}}) unclude output of command execution
+- [`execute`]({{cmd-execute}}) include output of command execution
 
 {{cmd-include:include}}
 ### Include
@@ -25,65 +25,7 @@ The include command uses the following syntax
 this command included content from some file into the actual
 markdown file.
 
-In the first flavor numbering starts from 1, given start and end line are included.
-If omitted the selection starts from the beginning or is taken to the end.
-
-In the second flavor the content between two lines containing the pattern
-`--- begin <key> ---` and `--- end <key> ---` is used.
-Those patterns MUST occur exactly once.
-
-This command can be used to embed some content of another file into the 
-Markdown file, for example
-parts of a Go file to provide some documentation consistent with actual
-code like in the following example
-
-<pre>
-{{include}{../../../patterns.go}{7:11}&rcub;
-</pre>
-
-which extracts the regular expressions used
-to parse the annotations used by this tool.
-
-```go
-{{include}{../../../patterns.go}{7:11}}
-```
-
-The second example uses the pattern syntax
-to determine include content:
-
-<pre>
-{{include}{../../../cmds.go}{include args}&rcub;
-</pre>
-
-extracts the lines between the start and end pattern
-
-```go
-{{include}{../../../cmds.go}{example}}
-```
-
-which are the regexps used to parse the two argument flavors.
-
-{{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}}
-
-The previous paragraph is taken from the source file
-```go
-// --- begin filter ---
-{{include}{../../../cmds.go}{filter}}
-// --- end filter ---
-```
-using
-
-<pre>
-{{include}{../../../cmds.go}{filter}{(?m)^.*// ?(.*)$}&rcub;
-</pre>
-
-If some special character like `{` or `}` are required 
-in the regukar expression, they must be encoded a HTML entities: for example
-
-- <code>&lcub;</code>: &amp;lcub;
-- <code>&rcub;</code>: &amp;rcub;
-
-There are some [standard pattern]({{term-pattern}}) defined as part of the *mdref* tool. Additional patterns can be defined with the [`pattern` command]({{cmd-pattern}}).
+It additionally accepts some [filtering a substitution options]({{filtering}}).
 
 {{cmd-execute:execute}}
 ### Execute
@@ -140,3 +82,138 @@ substitutes line number 5
 {{execute}{go}{run}{../../../democmd}{text}{some demo text}{<extract>}{5}}
 ```
 
+{{filtering}}
+## Filter and Substitutions
+
+Both commands, [{{cmd-include}]] and [{{cmd-execute}}] accept an optional filter for the
+addressed content. Instead of just taking the complete content a subset of the 
+lines is used.
+
+### Line-Number based Line Selection
+
+```
+...{[<startline>][:[<endline>]]}
+```
+
+In this first flavor numbering starts from 1, given start and end line are included.
+If omitted the selection starts from the beginning or is taken to the end.
+
+The include command using this option can be used to embed some content
+of another file into the
+Markdown file, for example
+parts of a Go file to provide some documentation consistent with actual
+code like in the following example
+
+<pre>
+{{include}{../../../patterns.go}{7:11}&rcub;
+</pre>
+
+which extracts the regular expressions used
+to parse the annotations used by this tool.
+
+```go
+{{include}{../../../patterns.go}{7:11}}
+```
+
+
+### Key-based Line election
+
+```
+...{<key>}
+```
+
+The problem with line numbers is to keep source and include up-to-date.
+If the content changes the line numbers for the selection filter must be adapted.
+
+In the second flavor the content between two lines containing the pattern
+`--- begin <key> ---` and `--- end <key> ---` is used instead of using fixed line numbers.
+Those pattern pairs MUST occur exactly once. This is more flexible but
+requires to prepare the source, for example adding appropriate comments
+into a source file.
+
+Let's have a look again at the [{{cmd-include}}] command.
+<pre>
+{{include}{../../../cmds.go}{include args}&rcub;
+</pre>
+
+extracts the lines between the start and end pattern
+
+```
+{{include}{../../../cmds.go}{example}}
+```
+
+Depending on the kind of source an appropriate comment 
+syntax can be used for this.
+In Java, Go, C or C++ this can then look like
+
+```go
+// --- begin include args ---
+...
+/* --- end include args --- */
+```
+
+Or in HTML or markdown it could be
+
+```go
+<!--- begin something --->
+	...
+<!--- end someting --->
+```
+
+### Regular expressions
+
+```go
+...{<line filter>}{<pattern>}
+```
+It filters the selected line range by a [regexp pattern](https://pkg.go.dev/regexp).
+
+
+<!--- begin filter --->
+{{include}{../../../cmds.go}{filter}{(?m)^.*// *(.*)$}}
+<!--- end filter --->
+
+For example, the previous paragraph is directly taken from a comment in the source file
+`cmds.go` using this include command:
+
+<!--- begin filter key --->
+<pre>
+{{include}{commands.md}{filter}}
+</pre>
+<!--- end filter key --->
+
+Even this is directly extracted from this markdown source just by surrounding 
+the {{{cmd-include}}} command with a line selection filter key.
+
+{{include}{commands.md}{filter key}}
+
+If some special character like `{` or `}` are required
+in the regular expression, they must be encoded a HTML entities: for example
+
+- <code>&lcub;</code>: &amp;lcub;
+- <code>&rcub;</code>: &amp;rcub;
+
+There are some [standard pattern]({{term-pattern}}) defined as part of the *mdref* tool. Additional patterns can be defined with the [`pattern` command]({{cmd-pattern}}).
+
+### Substitution 
+
+By default, the result of a pattern selection is used, If a capturing group
+is defined the content of this group instead of the complete match is used.
+ But there is also a possibility to compose the used content completely
+on capturing groups. If 1 or more groups are used and additional
+argument can be used to describe a substitution template.
+(for more than one group the template is required)
+
+```
+{<line selection>}{<regexp>}{<substitution template>}
+```
+
+In the template group variables can be used to refer to the content matched by a capturing group:
+
+- `$<n>`: capturing group `<n>`, where `0` describes the complete match.
+- `$<name>`: name of named capturing group.
+- `$(<group>)` group number or name
+- `$(<group>/<regexp>/<subst>)`: in the content of the described group the occurrences of the given regular expression are replaced by the given template. This template may again refer to capturing groups of the regular expression.
+
+### Omitting a Line Selection
+
+{{include}{../../text}{}}
