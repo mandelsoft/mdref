@@ -93,11 +93,11 @@ the source base.
 
 To simplify this, *mdref* supports some standard patterns, which can be specified by name instead of a regular expression.
 
-- <code>go&lowbar;const</code>: the name of a Go constant (<code>&#34; &ast;const +([&lowbar;a-zA-Z]+) &ast;= &ast;&#34;</code>)
-- <code>go&lowbar;const&lowbar;value</code>: the value of a Go constant (<code>&#34; &ast;const +[&lowbar;a-zA-Z]+ &ast;= &ast;(.&ast;)\n&#34;</code>)
-- <code>go&lowbar;var</code>: the name of a Go variable (<code>&#34; &ast;var +([&lowbar;a-zA-Z]+) &ast;= &ast;&#34;</code>)
-- <code>go&lowbar;type</code>: the name of a Go type (<code>&#34; &ast;type +([&lowbar;a-zA-Z]+) &ast;(?:struct|func|\\[|=)&#34;</code>)
-- <code>go&lowbar;func</code>: the name of a Go function (<code>&#34; &ast;func +([&lowbar;a-zA-Z]+) &ast;[(\\[]]&#34;</code>)
+- <code>go-const</code>: the name of a Go constant (<code>&#34;(?m)^\\s&ast;const +([&lowbar;a-zA-Z]+) &ast;= &ast;&#34;</code>)
+- <code>go-const-value</code>: the value of a Go constant (<code>&#34;(?m)^\\s&ast;const +[&lowbar;a-zA-Z]+ &ast;= &ast;(.&ast;)\n&#34;</code>)
+- <code>go-var</code>: the name of a Go variable (<code>&#34;(?m)^\\s&ast;var +([&lowbar;a-zA-Z]+) &ast;= &ast;&#34;</code>)
+- <code>go-type</code>: the name of a Go type (<code>&#34;(?m)^\\s&ast;([&lowbar;a-zA-Z]+) &ast;(?:struct|func|interface|\\[|=)&#34;</code>)
+- <code>go-func</code>: the name of a Go function (<code>&#34;(?m)^\\s&ast;func\\s+(?:\\(\\s&ast;\\w+\\s+[\\w&ast;]+\\s&ast;\\)\\s+)?(\\w+)&#34;</code>)
 
 #### Pattern Definition
 

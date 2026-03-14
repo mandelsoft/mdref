@@ -95,19 +95,19 @@ the source base.
 
 To simplify this, *mdref* supports some standard patterns, which can be specified by name instead of a regular expression.
 
-{{term}{`go-const}{include}{../../../patterns.go}{go-const}{go-const}}
+{{term}{`go-const}{include}{../../../patterns.go}{go-const}{go-const}{$(1/_/-)}}
 {{term}{`go-const-value}{include}{../../../patterns.go}{go-const}{go-const-value}}
 - {{{go-const}}}: the name of a Go constant ({{{go-const-value}}})
-{{term}{`go-const--value}{include}{../../../patterns.go}{go-const-value}{go-const}}
+{{term}{`go-const--value}{include}{../../../patterns.go}{go-const-value}{go-const}{$(1/_/-)}}
 {{term}{`go-const--value-value}{include}{../../../patterns.go}{go-const-value}{go-const-value}}
 - {{{go-const--value}}}: the value of a Go constant ({{{go-const--value-value}}})
-{{term}{`go-var}{include}{../../../patterns.go}{go-var}{go-const}}
+{{term}{`go-var}{include}{../../../patterns.go}{go-var}{go-const}{$(1/_/-)}}
 {{term}{`go-var-value}{include}{../../../patterns.go}{go-var}{go-const-value}}
 - {{{go-var}}}: the name of a Go variable ({{{go-var-value}}})
-{{term}{`go-type}{include}{../../../patterns.go}{go-type}{go-const}}
+{{term}{`go-type}{include}{../../../patterns.go}{go-type}{go-const}{$(1/_/-)}}
 {{term}{`go-type-value}{include}{../../../patterns.go}{go-type}{go-const-value}}
 - {{{go-type}}}: the name of a Go type ({{{go-type-value}}})
-{{term}{`go-func}{include}{../../../patterns.go}{go-func}{go-const}}
+{{term}{`go-func}{include}{../../../patterns.go}{go-func}{go-const}{$(1/_/-)}}
 {{term}{`go-func-value}{include}{../../../patterns.go}{go-func}{go-const-value}}
 - {{{go-func}}}: the name of a Go function ({{{go-func-value}}})
 

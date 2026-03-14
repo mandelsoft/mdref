@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/mandelsoft/filepath/pkg/filepath"
+	myregexp "github.com/mandelsoft/mdref/regexp"
 )
 
 type Command interface {
@@ -36,9 +37,10 @@ type extractor interface {
 
 type filter struct {
 	filter *regexp.Regexp
+	subst  []byte
 }
 
-func NewFilter(def []byte) (*filter, error) {
+func NewFilter(def []byte, subst []byte) (*filter, error) {
 	var err error
 	if def == nil {
 		return nil, nil
@@ -52,7 +54,8 @@ func NewFilter(def []byte) (*filter, error) {
 			return nil, fmt.Errorf("invalid filter expression %q: %w", s, err)
 		}
 	}
-	return &filter{fexp}, nil
+
+	return &filter{fexp, subst}, nil
 }
 
 func (i *Include) EOL() bool {
@@ -69,6 +72,8 @@ func (i *Include) getData(p string) ([]byte, error) {
 	}
 	return data, nil
 }
+
+var regexpcfg = myregexp.NewSettings('(', ')', '/')
 
 // --- begin filter ---
 // An optional third argument can be used to specify a filter regular
@@ -87,13 +92,26 @@ func (i *filter) Filter(data []byte) ([]byte, error) {
 	if strings.HasPrefix(i.filter.String(), "(?m)") {
 		sep = "\n"
 	}
-	matches := i.filter.FindAllSubmatch(data, -1)
+	indices := i.filter.FindAllSubmatchIndex(data, -1)
 	var result []byte
-	for _, m := range matches {
-		if len(m) != 2 {
-			return nil, fmt.Errorf("regular expression must contain one matching group")
+	for _, m := range indices {
+		var r []byte
+		if i.subst != nil {
+			// use composition pattern for match
+			r = regexpcfg.Expand([]byte{}, i.subst, data, m, i.filter.SubexpNames())
+		} else {
+			switch len(m) {
+			case 2:
+				// use complete match
+				r = data[m[0]:m[1]]
+			case 4:
+				r = data[m[2]:m[3]]
+			default:
+				// multiple matching groups
+				return nil, fmt.Errorf("multiple matching groups require a composion argument")
+			}
 		}
-		result = append(result, m[1]...)
+		result = append(result, r...)
 		result = append(result, []byte(sep)...)
 	}
 	return result, nil
@@ -123,8 +141,8 @@ type PatternExtractor struct {
 
 // --- begin example ---
 // --- begin include args ---
-var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{(.*)})?)?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9 -]*)}(?:{(.*)})?$")
+var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{([^}]+)}(?:{([^}]+)})?)?)?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9- ]*)}(?:{([^}]+)})?(?:{([^}]+)})?$")
 
 // --- end include args ---
 // --- end example ---
@@ -154,7 +172,7 @@ func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
 			}
 		}
 		var filter *filter
-		filter, err = NewFilter(matches[5])
+		filter, err = NewFilter(matches[5], matches[6])
 		if err != nil {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
@@ -164,7 +182,7 @@ func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
 	matches = includeExpPat.FindSubmatch(args)
 	if len(matches) != 0 {
 		var filter *filter
-		filter, err = NewFilter(matches[3])
+		filter, err = NewFilter(matches[3], matches[4])
 		if err != nil {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
@@ -314,8 +332,8 @@ func NewExecute(pos Position, args []byte, nl bool) (Command, error) {
 	if len(cmd) == 0 {
 		return nil, fmt.Errorf("command argument required")
 	}
-	if len(extract) > 2 {
-		return nil, fmt.Errorf("extraction mode requires a maximum of 2 arguments (found %d)", len(extract))
+	if len(extract) > 3 {
+		return nil, fmt.Errorf("extraction mode requires a maximum of 3 arguments (found %d)", len(extract))
 	}
 
 	var ext extractor
@@ -356,12 +374,16 @@ func NewExecute(pos Position, args []byte, nl bool) (Command, error) {
 	}
 
 	var filter *filter
-	if len(extract) == 2 {
-		filter, err = NewFilter([]byte(extract[1]))
-		if err != nil {
-			return nil, fmt.Errorf("invalid filter expression: %w", err)
-		}
+	switch len(extract) {
+	case 2:
+		filter, err = NewFilter([]byte(extract[1]), nil)
+	case 3:
+		filter, err = NewFilter([]byte(extract[1]), []byte(extract[2]))
 	}
+	if err != nil {
+		return nil, fmt.Errorf("invalid filter: %w", err)
+	}
+
 	return &Execute{Empty{pos, nl}, cmd, filter, ext, nil}, nil
 }
 

@@ -24,6 +24,10 @@ bin/mdref: ${SOURCES}
 	mkdir -p bin
 	CGO_ENABLED=0 go build -ldflags $(BUILD_FLAGS) -o bin/mdref .
 
+#
+# test uses mdref to generate the documentation and compares
+# it with a reference result.
+# the documentation uses all the features to test.
 .PHONY: test
 test: bin/mdref
 	bin/mdref --list --headings --unix src tmp
@@ -34,6 +38,12 @@ wintest: bin/mdref
 	bin/mdref --list --headings --windows src tmp
 	diff -ur test tmp
 
+#
+# gentest generates a new reference for the test target.
+# It must be called after the documentation (or some test cases) has been
+# changed after validating that the actual generation result is
+# correct. This can be checked with target build to create
+# the documentation with the actual code.
 .PHONY: gentest
 gentest: bin/mdref
 	bin/mdref --list --headings --unix src test

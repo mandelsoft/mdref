@@ -585,7 +585,8 @@ func ParseTerm(path string, pos Position, data []byte, begin, end int, args []by
 		if err != nil {
 			return "", nil, fmt.Errorf("cannot extract term %q: %w", name, err)
 		}
-		text := strings.TrimSpace(string(tdata))
+		lines := strings.Split(string(tdata), "\n")
+		text := strings.TrimSpace(lines[0])
 		// fmt.Printf("identifier %q=%q\n", name, value)
 
 		ref := createAnchor(opts, data, pos, begin, end, name, text, standard)
