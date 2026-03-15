@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/mandelsoft/filepath/pkg/filepath"
@@ -170,7 +171,7 @@ func formatTerm(msg, term string) string {
 type Substitutions map[string][]byte
 
 func (s Substitutions) ReplaceAll(data []byte, src []byte, dst []byte) []byte {
-	key := fmt.Sprintf("<!--**subst key: %5x**-->", len(s))
+	key := fmt.Sprintf("<!--**subst key: %5d**-->", len(s))
 	s[key] = dst
 	/*
 	 */
@@ -178,11 +179,14 @@ func (s Substitutions) ReplaceAll(data []byte, src []byte, dst []byte) []byte {
 	// return bytes.ReplaceAll(data, src, dst)
 }
 
+var marker = regexp.MustCompile("<!--\\*\\*subst key: *[0-9]+\\*\\*-->")
+
 func (s Substitutions) Finalize(data []byte) []byte {
-	for k, v := range s {
-		data = bytes.ReplaceAll(data, []byte(k), v)
-	}
-	return data
+	return marker.ReplaceAllFunc(data, s.substitute)
+}
+
+func (s Substitutions) substitute(data []byte) []byte {
+	return s[string(data)]
 }
 
 func substituteTerm(substitutions Substitutions, data []byte, key string, kformat string, term *Ref, tformat string, flavors ...bool) []byte {

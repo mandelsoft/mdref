@@ -216,4 +216,4 @@ In the template group variables can be used to refer to the content matched by a
 
 ### Omitting a Line Selection
 
-{{include}{../../text}{}}
+{{include}{../../../democmd/text}{}}

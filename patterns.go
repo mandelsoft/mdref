@@ -37,12 +37,37 @@ const go_const_value = "(?m)^\\s*const +[_a-zA-Z]+ *= *(.*)\n"
 
 // --- end go-const-value ---
 
+// --- begin go-line-comment ---
+// extract comment text from a Go source file using line comment syntax.
+const go_line_comment = "(?m)^\\s*//\\s*(.*)\n"
+
+// --- end go-line-comment ---
+
+// --- begin go-comment ---
+/*
+   extract comment text from a Go source file using standard comment syntax.
+   It does not support the exclusion of comment lines starting with ` *`.
+*/
+const go_comment = "/\\*\\s*([^*]*(?:\\*+[^/][^*]*)*)\\s*\\*/"
+
+// --- end go-comment ---
+
+// --- begin html-comment ---
+// <!----- extract HTML comment. ---->
+const html_comment = "<!--+\\s*([\\s\\S]*?)\\s*-+->"
+
+// --- end html-comment ---
+
 func init() {
 	MustAddFilter("go-func", go_func)
 	MustAddFilter("go-type", go_type)
 	MustAddFilter("go-var", go_var)
 	MustAddFilter("go-const", go_const)
 	MustAddFilter("go-const-value", go_const_value)
+
+	MustAddFilter("go-line-comment", go_line_comment)
+	MustAddFilter("go-comment", go_comment)
+	MustAddFilter("html-comment", html_comment)
 }
 
 func MustAddFilter(name, expr string) {

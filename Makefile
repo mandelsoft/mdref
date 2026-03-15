@@ -30,11 +30,13 @@ bin/mdref: ${SOURCES}
 # the documentation uses all the features to test.
 .PHONY: test
 test: bin/mdref
+	rm -rf tmp/*
 	bin/mdref --list --headings --unix src tmp
 	diff -ur test tmp
 
 .PHONY: wintest
 wintest: bin/mdref
+	rm -rf tmp/*
 	bin/mdref --list --headings --windows src tmp
 	diff -ur test tmp
 
@@ -46,4 +48,5 @@ wintest: bin/mdref
 # the documentation with the actual code.
 .PHONY: gentest
 gentest: bin/mdref
+	rm -rf test/*
 	bin/mdref --list --headings --unix src test
