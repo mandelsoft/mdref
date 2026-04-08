@@ -3,6 +3,8 @@
 <!-- from ../../../src/doc/chapters/commands.md -->
 
 ## Commands
+<!--- begin variable --->
+<!--- end variable --->
 
 Commands provide additional functionality to Markdown files.
 All commands use the same basic annotation syntax:
@@ -15,6 +17,8 @@ The following commands are supported:
 
 - [`include`](#include) include content of other file
 - [`execute`](#execute) include output of command execution
+
+Inside dedicated command arguments [variables](variables.md) can be used.
 
 ### Include
 

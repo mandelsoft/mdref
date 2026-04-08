@@ -120,11 +120,11 @@ printed, additionally.
 		dst = args[1]
 	}
 
-	err := prescan(src, "", opts)
-	Error(err)
+	Error(prescan(src, "", opts))
+	Error(NormalizeVariables())
 
 	files, err := scan(src, "", opts)
-	
+
 	Error(err)
 
 	resolution, err := resolve(files)

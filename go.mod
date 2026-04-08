@@ -1,11 +1,12 @@
 module github.com/mandelsoft/mdref
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/gertd/go-pluralize v0.2.1
-	github.com/mandelsoft/filepath v0.0.0-20230412200429-36b1eb66bd27
+	github.com/mandelsoft/filepath v0.0.0-20240223090642-3e2777258aa3
+	github.com/mandelsoft/goutils v0.0.0-20260407151801-9d4576be49b3
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.0
 	golang.org/x/text v0.33.0

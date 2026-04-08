@@ -66,6 +66,10 @@ func (i *Include) getData(p string) ([]byte, error) {
 	if !filepath.IsAbs(i.file) {
 		p = filepath.Join(filepath.Dir(p), i.file)
 	}
+	p, err := Subst(p)
+	if err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(p)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read include file %q", i.file)
@@ -279,8 +283,16 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 		return e.data, nil
 	}
 
+	args := make([]string, len(e.cmd))
+	for i, arg := range e.cmd {
+		var err error
+		args[i], err = Subst(arg)
+		if err != nil {
+			return nil, err
+		}
+	}
 	stderr := &bytes.Buffer{}
-	cmd := exec.Command(e.cmd[0], e.cmd[1:]...)
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = filepath.Dir(path)
 	cmd.Stderr = stderr
 	r, err := cmd.Output()
@@ -409,7 +421,7 @@ func (e *Empty) GetSubstitution(path string, opts Options) ([]byte, error) {
 
 var patternExp = regexp.MustCompile("^{([(a-z][a-z.-]*)}{([^}]+)}$")
 
-func NewPattern(pos Position, args []byte, nl bool) (Command, error) {
+func NewPattern(pos Position, args []byte, nl bool, def bool) (Command, error) {
 	m := patternExp.FindSubmatch(args)
 	if m == nil {
 		return nil, fmt.Errorf("invalid pattern arguments")
@@ -424,6 +436,35 @@ func NewPattern(pos Position, args []byte, nl bool) (Command, error) {
 		return nil, fmt.Errorf("invalid regular expression %q: %w", pat, err)
 	}
 
-	FilterPattern[name] = exp
+	if def {
+		if _, ok := FilterPattern[name]; ok {
+			return nil, fmt.Errorf("pattern %q already defined", name)
+		}
+		FilterPattern[name] = exp
+	}
 	return &Empty{pos, true}, nil
+}
+
+type Variable struct {
+	Empty
+	name  string
+	value string
+}
+
+var variablePat = regexp.MustCompile("^{([a-zA-Z]+)}{([^{}]+)}$")
+
+func NewVariable(pos Position, args []byte, nl bool, def bool) (Command, error) {
+	matches := variablePat.FindSubmatch(args)
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("invalid variable arguments %q", string(args))
+	}
+	name := string(matches[1])
+	value := string(matches[2])
+	if def {
+		if _, ok := Variables[name]; ok {
+			return nil, fmt.Errorf("variable name %q already defined", name)
+		}
+		Variables[name] = value
+	}
+	return &Variable{Empty{pos, nl}, name, value}, nil
 }

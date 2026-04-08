@@ -177,7 +177,9 @@ func scanDefs(src string, opts Options) error {
 
 		switch key {
 		case "pattern":
-			_, err = NewPattern(pos, m[2], true)
+			_, err = NewPattern(pos, m[2], true, true)
+		case "variable":
+			_, err = NewVariable(pos, m[2], true, true)
 		default:
 		}
 		if err != nil {
@@ -319,8 +321,10 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 		key := string(m[1])
 
 		switch key {
+		case "variable":
+			cmd, err = NewVariable(pos, m[2], data[end-1] == '\n', false)
 		case "pattern":
-			cmd, err = NewPattern(pos, m[2], data[end-1] == '\n')
+			cmd, err = NewPattern(pos, m[2], data[end-1] == '\n', false)
 		case "term":
 			var term string
 			var ref *Ref

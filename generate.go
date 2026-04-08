@@ -124,7 +124,12 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 					if len(sub) > 0 && c.EOL() && sub[len(sub)-1] == '\n' {
 						sub = sub[:len(sub)-1]
 					}
-					data = substitutions.ReplaceAll(data, []byte(k), sub)
+					if len(sub) == 0 && c.EOL() {
+						src := append(append([]byte{}, k...), '\n')
+						data = substitutions.ReplaceAll(data, src, sub)
+					} else {
+						data = substitutions.ReplaceAll(data, []byte(k), sub)
+					}
 				}
 
 				/*

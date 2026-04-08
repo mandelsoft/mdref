@@ -1,5 +1,8 @@
 ## Commands
 {{commands:command}}
+<!--- begin variable --->
+{{variable}{democmd}{$(root)/democmd}}
+<!--- end variable --->
 
 Commands provide additional functionality to Markdown files.
 All commands use the same basic annotation syntax:
@@ -12,6 +15,8 @@ The following commands are supported:
 
 - [`include`]({{cmd-include}}) include content of other file
 - [`execute`]({{cmd-execute}}) include output of command execution
+
+Inside dedicated command arguments [{{*cmd-variable}}] can be used.
 
 {{cmd-include:include}}
 ### Include
@@ -49,7 +54,7 @@ The command in directory [`democmd`](../../democmd/main.go) outputs some
 test content:
 
 ```
-{{execute}{go}{run}{../../../democmd}{text}{some demo text}}
+{{execute}{go}{run}{$(democmd)}{text}{some demo text}}
 ```
 
 It can be completely substituted (as shown above) with the command
@@ -112,7 +117,7 @@ which extracts the regular expressions used
 to parse the annotations used by this tool.
 
 ```go
-{{include}{../../../patterns.go}{7:11}}
+{{include}{$(root)/patterns.go}{7:11}}
 ```
 
 
