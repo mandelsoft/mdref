@@ -106,9 +106,11 @@ There are also other useful patterns, like:
 <!--- begin other patterns --->
 - <code>go-line-comment</code>:  (<code>&#34;(?m)^\\s&ast;//\\s&ast;(.&ast;)\n&#34;</code>)
   extract comment text from a Go source file using line comment syntax.
+  
 - <code>go-comment</code>:  (<code>&#34;/\\&ast;\\s&ast;([^&ast;]&ast;(?:\\&ast;+[^/][^&ast;]&ast;)&ast;)\\s&ast;\\&ast;/&#34;</code>)
   extract comment text from a Go source file using standard comment syntax.
-   It does not support the exclusion of comment lines starting with ` *`.
+     It does not support the exclusion of comment lines starting with ` *`.
+  
 - <code>html-comment</code>:  (<code>&#34;&lt;!--+\\s&ast;([\\s\\S]&ast;?)\\s&ast;-+-&gt;&#34;</code>)
   extract HTML comment.
 

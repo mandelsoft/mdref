@@ -337,7 +337,16 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 				continue
 			}
 		default:
-			cmd, err = parseSubstCmd(key, pos, m[2], data[end-1] == '\n')
+			gap := ""
+			i := beg - 1
+			for i >= 0 && (data[i] == ' ' || data[i] == '\t') {
+				gap = string(data[i]) + gap
+				i--
+			}
+			if i != 0 && data[i] != '\n' {
+				gap = ""
+			}
+			cmd, err = parseSubstCmd(key, pos, m[2], data[end-1] == '\n', gap)
 		}
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%s: %s: %w", src, pos.Position(), err)
@@ -400,14 +409,14 @@ func acceptAnchor(data []byte, beg, end int) bool {
 	return true
 }
 
-func parseSubstCmd(key string, pos Position, def []byte, nl bool) (Command, error) {
+func parseSubstCmd(key string, pos Position, def []byte, nl bool, gap ...string) (Command, error) {
 	var cmd Command
 	var err error
 	switch key {
 	case "include":
-		cmd, err = NewInclude(pos, def, nl)
+		cmd, err = NewInclude(pos, def, nl, gap...)
 	case "execute":
-		cmd, err = NewExecute(pos, def, nl)
+		cmd, err = NewExecute(pos, def, nl, gap...)
 	default:
 		err = fmt.Errorf("invalid command %q", key)
 	}

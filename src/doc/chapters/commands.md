@@ -11,7 +11,14 @@ All commands use the same basic annotation syntax:
 {{<name>}{<arg>}...}
 ```
 
-The following commands are supported:
+There are two classes of commands:
+- [Substitution Commands]({{cmds-subst}})
+- [Definition Commands]({{cmds-def}})
+
+### Substitution Commands 
+{{cmds-subst:substitution command}}
+
+The following substitution commands are supported:
 
 - [`include`]({{cmd-include}}) include content of other file
 - [`execute`]({{cmd-execute}}) include output of command execution
@@ -19,7 +26,7 @@ The following commands are supported:
 Inside dedicated command arguments [{{*cmd-variable}}] can be used.
 
 {{cmd-include:include}}
-### Include
+#### Include
 
 The include command uses the following syntax
 <pre>
@@ -33,7 +40,7 @@ markdown file.
 It additionally accepts some [filtering a substitution options]({{filtering}}).
 
 {{cmd-execute:execute}}
-### Execute
+#### Execute
 
 The execute command uses the following syntax
 <pre>
@@ -88,13 +95,13 @@ substitutes line number 5
 ```
 
 {{filtering}}
-## Filter and Substitutions
+#### Filter and Substitutions
 
 Both commands, [{{cmd-include}]] and [{{cmd-execute}}] accept an optional filter for the
 addressed content. Instead of just taking the complete content a subset of the 
 lines is used.
 
-### Line-Number based Line Selection
+##### Line-Number based Line Selection
 
 ```
 ...{[<startline>][:[<endline>]]}
@@ -121,7 +128,7 @@ to parse the annotations used by this tool.
 ```
 
 
-### Key-based Line election
+##### Key-based Line election
 
 ```
 ...{<key>}
@@ -165,7 +172,7 @@ Or in HTML or markdown it could be
 <!--- end someting --->
 ```
 
-### Regular expressions
+##### Regular expressions
 
 ```go
 ...{<line filter>}{<pattern>}
@@ -199,7 +206,7 @@ in the regular expression, they must be encoded a HTML entities: for example
 
 There are some [standard pattern]({{term-pattern}}) defined as part of the *mdref* tool. Additional patterns can be defined with the [`pattern` command]({{cmd-pattern}}).
 
-### Substitution 
+##### Result Substitution 
 
 By default, the result of a pattern selection is used, If a capturing group
 is defined the content of this group instead of the complete match is used.
@@ -219,6 +226,32 @@ In the template group variables can be used to refer to the content matched by a
 - `$(<group>)` group number or name
 - `$(<group>/<regexp>/<subst>)`: in the content of the described group the occurrences of the given regular expression are replaced by the given template. This template may again refer to capturing groups of the regular expression.
 
-### Omitting a Line Selection
+##### Omitting a Line Selection
 
 {{include}{../../../democmd/text}{}}
+
+#### Substitution Indents.
+
+If a [{{cmds-subst}}] is idented, this indent is applied to line breaks in the substituted content, also.
+
+<!--- begin indent --->
+- for example, you can indent included text according a list indentation as shown in the example below
+
+  ````
+  {{include}{commands.md}{indent}{(?s)(.*)}{$(1/\s````/ ```)}}
+  ````
+<!--- end indent --->
+
+**Note**: It includes itself into the document. To handle the tripple tick correctly, the additional substitution is required.
+
+### Definition Commands
+{{cmds-def}}
+
+With definition commands it is possible to define some settings valid for the
+complete processing.
+
+The following definition commands are supported:
+
+- [`variable`]({{cmd-variable}}) Define variable values usable in command arguments
+- [`pattern`]({{cmd-pattern}}) Define standard pattern usable in [substitution commands]({{cmds-subst}}).
+- [`term`]({{term-anchor}}) Define Terms

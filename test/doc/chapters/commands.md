@@ -13,14 +13,20 @@ All commands use the same basic annotation syntax:
 {{<name>}{<arg>}...}
 ```
 
-The following commands are supported:
+There are two classes of commands:
+- [Substitution Commands](#substitution-commands)
+- [Definition Commands](#definition-command)
+
+### Substitution Commands 
+
+The following substitution commands are supported:
 
 - [`include`](#include) include content of other file
 - [`execute`](#execute) include output of command execution
 
 Inside dedicated command arguments [variables](variables.md) can be used.
 
-### Include
+#### Include
 
 The include command uses the following syntax
 <pre>
@@ -33,7 +39,7 @@ markdown file.
 
 It additionally accepts some [filtering a substitution options](#filter-and-substitutions).
 
-### Execute
+#### Execute
 
 The execute command uses the following syntax
 <pre>
@@ -92,13 +98,13 @@ substitutes line number 5
 this is line 5 of the demo output
 ```
 
-## Filter and Substitutions
+#### Filter and Substitutions
 
 Both commands, [{{cmd-include}]] and [execute](#execute) accept an optional filter for the
 addressed content. Instead of just taking the complete content a subset of the 
 lines is used.
 
-### Line-Number based Line Selection
+##### Line-Number based Line Selection
 
 ```
 ...{[<startline>][:[<endline>]]}
@@ -129,7 +135,7 @@ var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]*})+)}`)
 ```
 
 
-### Key-based Line election
+##### Key-based Line election
 
 ```
 ...{<key>}
@@ -177,7 +183,7 @@ Or in HTML or markdown it could be
 <!--- end someting --->
 ```
 
-### Regular expressions
+##### Regular expressions
 
 ```go
 ...{<line filter>}{<pattern>}
@@ -192,7 +198,7 @@ file range is matched by this regular expression and
 the matched content of the all matches is
 concatenated. If the expression uses the multi-line mode, the matches
 are suffixed with a newline.
-If the expression conitains exactly one capturing group, the matched
+If the expression contains exactly one capturing group, the matched
 content for this group is taken.
 <!--- end filter --->
 
@@ -220,7 +226,7 @@ in the regular expression, they must be encoded a HTML entities: for example
 
 There are some [standard pattern](terms.md#term-extraction-pattern) defined as part of the *mdref* tool. Additional patterns can be defined with the [`pattern` command](terms.md#pattern-definition).
 
-### Substitution 
+##### Result Substitution 
 
 By default, the result of a pattern selection is used, If a capturing group
 is defined the content of this group instead of the complete match is used.
@@ -240,9 +246,38 @@ In the template group variables can be used to refer to the content matched by a
 - `$(<group>)` group number or name
 - `$(<group>/<regexp>/<subst>)`: in the content of the described group the occurrences of the given regular expression are replaced by the given template. This template may again refer to capturing groups of the regular expression.
 
-### Omitting a Line Selection
+##### Omitting a Line Selection
 
 
 If sub-sequent arguments should be used without
 a line filter it is possible to use `{:}` to select
 all lines.
+
+#### Substitution Indents.
+
+If a [substitution command](#substitution-commands) is idented, this indent is applied to line breaks in the substituted content, also.
+
+<!--- begin indent --->
+- for example, you can indent included text according a list indentation as shown in the example below
+
+  ````
+  - for example, you can indent included text according a list indentation as shown in the example below
+  
+    ```
+    {{include}{commands.md}{indent}{(?s)(.*)}{$(1/\s````/ ```)}}
+    ```
+  ````
+<!--- end indent --->
+
+**Note**: It includes itself into the document. To handle the tripple tick correctly, the additional substitution is required.
+
+### Definition Commands
+
+With definition commands it is possible to define some settings valid for the
+complete processing.
+
+The following definition commands are supported:
+
+- [`variable`](variables.md) Define variable values usable in command arguments
+- [`pattern`](terms.md#pattern-definition) Define standard pattern usable in [substitution commands](#substitution-commands).
+- [`term`](terms.md#term-anchors) Define Terms

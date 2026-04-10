@@ -14,6 +14,20 @@ import (
 	myregexp "github.com/mandelsoft/mdref/regexp"
 )
 
+func Gap(gap ...string) string {
+	if len(gap) > 0 && gap[0] != "" {
+		return gap[0]
+	}
+	return ""
+}
+
+func ApplyGap(gap string, data []byte) []byte {
+	t := append([]byte{'\n'}, []byte(gap)...)
+	return bytes.ReplaceAll(data, []byte("\n"), t)
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 type Command interface {
 	Position() string
 	EOL() bool
@@ -29,6 +43,7 @@ type Include struct {
 	file      string
 	filter    *filter
 	extractor extractor
+	gap       string
 }
 
 type extractor interface {
@@ -86,7 +101,7 @@ var regexpcfg = myregexp.NewSettings('(', ')', '/')
 // the matched content of the all matches is
 // concatenated. If the expression uses the multi-line mode, the matches
 // are suffixed with a newline.
-// If the expression conitains exactly one capturing group, the matched
+// If the expression contains exactly one capturing group, the matched
 // content for this group is taken.
 // --- end filter ---
 
@@ -133,7 +148,12 @@ func (i *Include) GetSubstitution(p string, opts Options) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("include file %q: %w", i.file, err)
 	}
-	return i.filter.Filter(data)
+
+	data, err = i.filter.Filter(data)
+	if err != nil {
+		return nil, err
+	}
+	return ApplyGap(i.gap, data), nil
 }
 
 type NumExtractor struct {
@@ -153,7 +173,7 @@ var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9- ]*)}(?:{
 // --- end include args ---
 // --- end example ---
 
-func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
+func NewInclude(pos Position, args []byte, nl bool, gap ...string) (Command, error) {
 	var err error
 
 	matches := includeExpNum.FindSubmatch(args)
@@ -182,7 +202,13 @@ func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
-		return &Include{Empty{pos, nl}, string(matches[1]), filter, &NumExtractor{int(start), int(end)}}, nil
+		return &Include{
+			Empty{pos, nl},
+			string(matches[1]),
+			filter,
+			&NumExtractor{int(start), (int(end))},
+			Gap(gap...),
+		}, nil
 	}
 
 	matches = includeExpPat.FindSubmatch(args)
@@ -192,7 +218,13 @@ func NewInclude(pos Position, args []byte, nl bool) (Command, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid filter expression: %w", err)
 		}
-		return &Include{Empty{pos, nl}, string(matches[1]), filter, &PatternExtractor{string(matches[2])}}, nil
+		return &Include{
+			Empty{pos, nl},
+			string(matches[1]),
+			filter,
+			&PatternExtractor{string(matches[2])},
+			Gap(gap...),
+		}, nil
 	}
 
 	return nil, fmt.Errorf("invalid include arguments %q", string(args))
@@ -266,6 +298,7 @@ type Execute struct {
 	filter    *filter
 	extractor extractor
 	data      []byte
+	gap       string
 }
 
 var _ Command = (*Execute)(nil)
@@ -314,7 +347,7 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 			return nil, fmt.Errorf("extract failed %v: %w", e.cmd, err)
 		}
 	}
-	e.data = r
+	e.data = ApplyGap(e.gap, r)
 	return r, nil
 }
 
@@ -322,7 +355,7 @@ var nextarg = regexp.MustCompile("^{([^}]+)}(.*)$")
 var extractExpNum = regexp.MustCompile("^([0-9]+)?(?:(:)([0-9]+)?)?$")
 var extractExpPat = regexp.MustCompile("^([a-zA-Z -]+)$")
 
-func NewExecute(pos Position, args []byte, nl bool) (Command, error) {
+func NewExecute(pos Position, args []byte, nl bool, gap ...string) (Command, error) {
 	var cmd []string
 
 	for {
@@ -397,7 +430,7 @@ func NewExecute(pos Position, args []byte, nl bool) (Command, error) {
 		return nil, fmt.Errorf("invalid filter: %w", err)
 	}
 
-	return &Execute{Empty{pos, nl}, cmd, filter, ext, nil}, nil
+	return &Execute{Empty{pos, nl}, cmd, filter, ext, nil, Gap(gap...)}, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
