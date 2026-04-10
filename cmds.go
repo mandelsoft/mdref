@@ -334,6 +334,10 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 			return nil, fmt.Errorf("cannot execute %v: %w (%s)", e.cmd, err, stderr.String())
 		}
 		return nil, fmt.Errorf("cannot execute %v: %w", e.cmd, err)
+	} else {
+		if len(r) == 0 {
+			r = stderr.Bytes()
+		}
 	}
 	if e.extractor != nil {
 		r, err = e.extractor.extract(r)
