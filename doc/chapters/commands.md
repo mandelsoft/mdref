@@ -10,8 +10,15 @@ Commands provide additional functionality to Markdown files.
 All commands use the same basic annotation syntax:
 
 ```
-{{<name>}{<arg>}...}
+{{<name>[![<option>{,<option>}]]}{<arg>}...}
 ```
+
+The command name may be followed by `!` and a comma separated list of
+option names modifying the behaviour of the command. An empty option list
+(just `!`) selects the default options of the command. Without `!`, no
+options are used. Options not supported by a command are rejected with an
+error listing them. Commands without options reject any option list,
+even the request for the default options.
 
 There are two classes of commands:
 - [Substitution Commands](#substitution-commands)
@@ -39,6 +46,11 @@ markdown file.
 
 It additionally accepts some [filtering a substitution options](#filter-and-substitutions).
 
+Supported [command options](#commands):
+
+- `nomarkers` (default): removes the marker lines (`--- begin <key> ---` and
+  `--- end <key> ---` of any key) from the included content.
+
 #### Execute
 
 The execute command uses the following syntax
@@ -55,6 +67,11 @@ as current working directory to resolve relative file names.
 
 Optionally the special argument `{<extract>}` can be used to append 
 some line selection arguments according to the [`include`](#include) command, line range as well as pattern selection and the optional additional filter argument.
+
+Supported [command options](#commands):
+
+- `nomarkers` (default): removes the marker lines (`--- begin <key> ---` and
+  `--- end <key> ---` of any key) from the substituted content.
 
 The command in directory [`democmd`](../../democmd/main.go) outputs some
 test content:
@@ -127,11 +144,11 @@ which extracts the regular expressions used
 to parse the annotations used by this tool.
 
 ```go
+
 var subExp = regexp.MustCompile(`{{{([*]?[A-Za-z][a-z0-9.-]+)}}}`)
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var lnkExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
 var tgtExp = regexp.MustCompile(`{{([a-z][a-z0-9.-]*)(:([a-zA-Z][\p{L}\p{N}- ]+))?}}`)
-var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]*})+)}`)
 ```
 
 
@@ -182,6 +199,29 @@ Or in HTML or markdown it could be
 	...
 <!--- end someting --->
 ```
+
+Sections may be nested, for example to include a complete function at one
+place and only a part of it at another place. By default, the extracted
+content contains the marker lines of nested sections, like in the example
+above, where the section `example` contains the section `include args`.
+With the command option `nomarkers` (the default option of the
+[include](#include) and [execute](#execute) commands) they are removed:
+
+<pre>
+{{include!}{../../../cmds.go}{example}&rcub;
+</pre>
+
+extracts
+
+```
+var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{([^}]+)}(?:{([^}]+)})?)?)?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9- ]*)}(?:{([^}]+)})?(?:{([^}]+)})?$")
+
+```
+
+The option is applied to the content selected by any kind of selection
+(complete file, line range or key), before an optional
+[filter](#filter-and-substitutions) is applied.
 
 ##### Regular expressions
 

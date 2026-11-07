@@ -62,7 +62,7 @@ func NormalizeVariables() error {
 	for _, k := range order {
 		v, err := Subst(Variables[k])
 		if err != nil {
-			return fmt.Errorf("variable %q:", k, err)
+			return fmt.Errorf("variable %q: %w", k, err)
 		}
 		Variables[k] = v
 	}

@@ -177,9 +177,9 @@ func scanDefs(src string, opts Options) error {
 
 		switch key {
 		case "pattern":
-			_, err = NewPattern(pos, m[2], true, true)
+			_, err = NewPattern(pos, m[3], true, true)
 		case "variable":
-			_, err = NewVariable(pos, m[2], true, true)
+			_, err = NewVariable(pos, m[3], true, true)
 		default:
 		}
 		if err != nil {
@@ -319,16 +319,20 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 		}
 		pos := info.Position(indices[i][0])
 		key := string(m[1])
+		options := parseOptions(m[2])
 
 		switch key {
 		case "variable":
-			cmd, err = NewVariable(pos, m[2], data[end-1] == '\n', false)
+			cmd, err = NewVariable(pos, m[3], data[end-1] == '\n', false)
 		case "pattern":
-			cmd, err = NewPattern(pos, m[2], data[end-1] == '\n', false)
+			cmd, err = NewPattern(pos, m[3], data[end-1] == '\n', false)
 		case "term":
+			if options != nil {
+				return nil, nil, nil, nil, fmt.Errorf("%s: %s: command %q: %w", src, pos.Position(), key, errNoOptions)
+			}
 			var term string
 			var ref *Ref
-			term, ref, err = ParseTerm(src, pos, data, beg, end, m[2], standard, opts)
+			term, ref, err = ParseTerm(src, pos, data, beg, end, m[3], standard, opts)
 			if ref != nil {
 				if targets[term] != nil {
 					return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of term %q", src, pos.Position(), term)
@@ -343,10 +347,15 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 				gap = string(data[i]) + gap
 				i--
 			}
-			if i != 0 && data[i] != '\n' {
+			if i >= 0 && data[i] != '\n' {
 				gap = ""
 			}
-			cmd, err = parseSubstCmd(key, pos, m[2], data[end-1] == '\n', gap)
+			cmd, err = parseSubstCmd(key, pos, m[3], data[end-1] == '\n', gap)
+		}
+		if err == nil && options != nil {
+			if err = cmd.ApplyOptions(options); err != nil {
+				err = fmt.Errorf("command %q: %w", key, err)
+			}
 		}
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("%s: %s: %w", src, pos.Position(), err)

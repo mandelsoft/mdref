@@ -28,7 +28,7 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 		src := filepath.Join(source, f.relpath)
 		rf, err := os.Open(src)
 		if err != nil {
-			return fmt.Errorf("cannot read source %s", src, err)
+			return fmt.Errorf("cannot read source %s: %w", src, err)
 		}
 		var r io.Reader = rf
 
@@ -36,7 +36,7 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 		w, err := os.OpenFile(tgt, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 		if err != nil {
 			rf.Close()
-			return fmt.Errorf("cannot read source %s", src, err)
+			return fmt.Errorf("cannot create target %s: %w", tgt, err)
 		}
 		var header []byte
 		if strings.HasSuffix(f.relpath, ".md") {
@@ -73,14 +73,14 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 				rf.Close()
 				w.Close()
 				if err != nil {
-					return fmt.Errorf("cannot read source %s", src, err)
+					return fmt.Errorf("cannot read source %s: %w", src, err)
 				}
 			} else {
 				data, err := io.ReadAll(r)
 				if err != nil {
 					rf.Close()
 					w.Close()
-					return fmt.Errorf("cannot read source %s", src, err)
+					return fmt.Errorf("cannot read source %s: %w", src, err)
 				}
 				data, win = normalizeLineEndings(data)
 				if opts.Unix {

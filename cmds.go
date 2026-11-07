@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html"
+	"maps"
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -32,6 +35,56 @@ type Command interface {
 	Position() string
 	EOL() bool
 	GetSubstitution(path string, opts Options) ([]byte, error)
+	// ApplyOptions applies the options given for the command
+	// ({{<name>!<option>,...}...}). It is only called if options are
+	// given, an empty list (just "!") selects the default options of
+	// the command. Options not supported by the command are rejected.
+	ApplyOptions(names []string) error
+}
+
+// errNoOptions is the error for commands not supporting any option.
+var errNoOptions = errors.New("no options supported")
+
+// commandOptions describes the options supported by a command:
+// the functions applying them and the default options.
+type commandOptions struct {
+	supported map[string]func()
+	defaults  []string
+}
+
+// apply applies the given options (see Command.ApplyOptions).
+// If options are not supported, all of them are reported and
+// no option is applied.
+func (o commandOptions) apply(names []string) error {
+	if len(names) == 0 {
+		names = o.defaults
+	}
+	var unsupported []string
+	for _, n := range names {
+		if _, ok := o.supported[n]; !ok {
+			unsupported = append(unsupported, fmt.Sprintf("%q", n))
+		}
+	}
+	if len(unsupported) > 0 {
+		supported := slices.Sorted(maps.Keys(o.supported))
+		return fmt.Errorf("unsupported option(s) %s (supported: %s)", strings.Join(unsupported, ", "), strings.Join(supported, ", "))
+	}
+	for _, n := range names {
+		o.supported[n]()
+	}
+	return nil
+}
+
+// markerOptions provides the options of commands extracting content.
+func markerOptions(noMarkers *bool) commandOptions {
+	return commandOptions{
+		supported: map[string]func(){
+			// nomarkers removes the marker lines of sections
+			// (of any key) from the extracted content.
+			"nomarkers": func() { *noMarkers = true },
+		},
+		defaults: []string{"nomarkers"},
+	}
 }
 
 type Commands map[string]Command
@@ -44,6 +97,12 @@ type Include struct {
 	filter    *filter
 	extractor extractor
 	gap       string
+	noMarkers bool
+}
+
+// ApplyOptions supports the option nomarkers (default).
+func (i *Include) ApplyOptions(names []string) error {
+	return markerOptions(&i.noMarkers).apply(names)
 }
 
 type extractor interface {
@@ -148,6 +207,9 @@ func (i *Include) GetSubstitution(p string, opts Options) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("include file %q: %w", i.file, err)
 	}
+	if i.noMarkers {
+		data = markerExp.ReplaceAll(data, nil)
+	}
 
 	data, err = i.filter.Filter(data)
 	if err != nil {
@@ -161,9 +223,14 @@ type NumExtractor struct {
 	end   int
 }
 
+// PatternExtractor extracts the lines between the lines containing
+// "--- begin <pattern> ---" and "--- end <pattern> ---".
 type PatternExtractor struct {
 	pattern string
 }
+
+// markerExp matches complete marker lines of any key.
+var markerExp = regexp.MustCompile(`(?m)^.*--- (?:begin|end) [a-zA-Z][a-zA-Z0-9- ]* ---.*(?:\r?\n|$)`)
 
 // --- begin example ---
 // --- begin include args ---
@@ -208,6 +275,7 @@ func NewInclude(pos Position, args []byte, nl bool, gap ...string) (Command, err
 			filter,
 			&NumExtractor{int(start), (int(end))},
 			Gap(gap...),
+			false,
 		}, nil
 	}
 
@@ -224,6 +292,7 @@ func NewInclude(pos Position, args []byte, nl bool, gap ...string) (Command, err
 			filter,
 			&PatternExtractor{string(matches[2])},
 			Gap(gap...),
+			false,
 		}, nil
 	}
 
@@ -299,6 +368,12 @@ type Execute struct {
 	extractor extractor
 	data      []byte
 	gap       string
+	noMarkers bool
+}
+
+// ApplyOptions supports the option nomarkers (default).
+func (e *Execute) ApplyOptions(names []string) error {
+	return markerOptions(&e.noMarkers).apply(names)
 }
 
 var _ Command = (*Execute)(nil)
@@ -345,6 +420,9 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 			return nil, fmt.Errorf("extract failed %v: %w", e.cmd, err)
 		}
 	}
+	if e.noMarkers {
+		r = markerExp.ReplaceAll(r, nil)
+	}
 	if e.filter != nil {
 		r, err = e.filter.Filter(r)
 		if err != nil {
@@ -357,7 +435,7 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 
 var nextarg = regexp.MustCompile("^{([^}]+)}(.*)$")
 var extractExpNum = regexp.MustCompile("^([0-9]+)?(?:(:)([0-9]+)?)?$")
-var extractExpPat = regexp.MustCompile("^([a-zA-Z -]+)$")
+var extractExpPat = regexp.MustCompile("^([a-zA-Z][a-zA-Z0-9- ]*)$")
 
 func NewExecute(pos Position, args []byte, nl bool, gap ...string) (Command, error) {
 	var cmd []string
@@ -434,7 +512,7 @@ func NewExecute(pos Position, args []byte, nl bool, gap ...string) (Command, err
 		return nil, fmt.Errorf("invalid filter: %w", err)
 	}
 
-	return &Execute{Empty{pos, nl}, cmd, filter, ext, nil, Gap(gap...)}, nil
+	return &Execute{Empty{pos, nl}, cmd, filter, ext, nil, Gap(gap...), false}, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -452,6 +530,11 @@ func (e *Empty) EOL() bool {
 
 func (e *Empty) GetSubstitution(path string, opts Options) ([]byte, error) {
 	return nil, nil
+}
+
+// ApplyOptions rejects all options, also the request for default options.
+func (e *Empty) ApplyOptions(names []string) error {
+	return errNoOptions
 }
 
 ////////////////////////////////////////////////////////////////////////////////

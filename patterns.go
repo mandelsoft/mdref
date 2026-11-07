@@ -2,13 +2,30 @@ package main
 
 import (
 	"regexp"
+	"strings"
 )
 
 var subExp = regexp.MustCompile(`{{{([*]?[A-Za-z][a-z0-9.-]+)}}}`)
 var refExp = regexp.MustCompile(`\({{([a-z0-9.-]+)}}\)`)
 var lnkExp = regexp.MustCompile(`\[{{([*]?[A-Za-z][a-z0-9.-]*)}}\]`)
 var tgtExp = regexp.MustCompile(`{{([a-z][a-z0-9.-]*)(:([a-zA-Z][\p{L}\p{N}- ]+))?}}`)
-var cmdExp = regexp.MustCompile(`{{([a-z]+)}((?:{[^}]*})+)}`)
+
+// cmdExp matches commands: the command name, optionally followed by "!" and
+// a comma separated list of option names, and the command arguments.
+var cmdExp = regexp.MustCompile(`{{([a-z]+)(!(?:[a-z][a-z0-9-]*(?:,[a-z][a-z0-9-]*)*)?)?}((?:{[^}]*})+)}`)
+
+// parseOptions provides the option names given with a command (the
+// second group of cmdExp): nil if no options are given (no "!"), an
+// empty list for an empty option list (just "!").
+func parseOptions(spec []byte) []string {
+	if len(spec) == 0 {
+		return nil
+	}
+	if len(spec) == 1 {
+		return []string{}
+	}
+	return strings.Split(string(spec[1:]), ",")
+}
 
 var FilterPattern = map[string]*regexp.Regexp{}
 
