@@ -230,12 +230,16 @@ type PatternExtractor struct {
 }
 
 // markerExp matches complete marker lines of any key.
-var markerExp = regexp.MustCompile(`(?m)^.*--- (?:begin|end) [a-zA-Z][a-zA-Z0-9- ]* ---.*(?:\r?\n|$)`)
+var markerExp = regexp.MustCompile(`(?m)^.*--- (?:begin|end) ` + keyExp + ` ---.*(?:\r?\n|$)`)
 
 // --- begin example ---
 // --- begin include args ---
+// keyExp is the syntax of the keys of marked sections
+// ("--- begin <key> ---" and "--- end <key> ---").
+const keyExp = "[a-zA-Z][a-zA-Z0-9- ]*"
+
 var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{([^}]+)}(?:{([^}]+)})?)?)?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9- ]*)}(?:{([^}]+)})?(?:{([^}]+)})?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{(" + keyExp + ")}(?:{([^}]+)})?(?:{([^}]+)})?$")
 
 // --- end include args ---
 // --- end example ---
@@ -435,7 +439,7 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 
 var nextarg = regexp.MustCompile("^{([^}]+)}(.*)$")
 var extractExpNum = regexp.MustCompile("^([0-9]+)?(?:(:)([0-9]+)?)?$")
-var extractExpPat = regexp.MustCompile("^([a-zA-Z][a-zA-Z0-9- ]*)$")
+var extractExpPat = regexp.MustCompile("^(" + keyExp + ")$")
 
 func NewExecute(pos Position, args []byte, nl bool, gap ...string) (Command, error) {
 	var cmd []string

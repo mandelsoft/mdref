@@ -176,8 +176,12 @@ extracts the lines between the start and end pattern
 
 ```
 // --- begin include args ---
+// keyExp is the syntax of the keys of marked sections
+// ("--- begin <key> ---" and "--- end <key> ---").
+const keyExp = "[a-zA-Z][a-zA-Z0-9- ]*"
+
 var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{([^}]+)}(?:{([^}]+)})?)?)?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9- ]*)}(?:{([^}]+)})?(?:{([^}]+)})?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{(" + keyExp + ")}(?:{([^}]+)})?(?:{([^}]+)})?$")
 
 // --- end include args ---
 ```
@@ -214,8 +218,12 @@ With the command option `nomarkers` (the default option of the
 extracts
 
 ```
+// keyExp is the syntax of the keys of marked sections
+// ("--- begin <key> ---" and "--- end <key> ---").
+const keyExp = "[a-zA-Z][a-zA-Z0-9- ]*"
+
 var includeExpNum = regexp.MustCompile("^{([^}]+)}(?:{([0-9]+)?(?:(:)([0-9]+)?)?}(?:{([^}]+)}(?:{([^}]+)})?)?)?$")
-var includeExpPat = regexp.MustCompile("^{([^}]+)}{([a-zA-Z][a-zA-Z0-9- ]*)}(?:{([^}]+)})?(?:{([^}]+)})?$")
+var includeExpPat = regexp.MustCompile("^{([^}]+)}{(" + keyExp + ")}(?:{([^}]+)})?(?:{([^}]+)})?$")
 
 ```
 
