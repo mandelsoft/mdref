@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/mandelsoft/filepath/pkg/filepath"
 )
 
 type Resolution map[string]*File
@@ -20,6 +22,8 @@ type Options struct {
 	Print       bool
 	Windows     bool
 	Unix        bool
+	// DocRoot is the absolute path of the source folder.
+	DocRoot string
 }
 
 func Error(err error) {
@@ -111,32 +115,36 @@ printed, additionally.
 		fmt.Printf("use mdref [<options>] [<source> [<target>]]\n")
 		os.Exit(1)
 	}
-	src := "."
+	srcdir := "."
 	if len(args) > 0 {
-		src = args[0]
+		srcdir = args[0]
 	}
 	dst := ""
 	if len(args) > 1 {
 		dst = args[1]
 	}
 
-	Error(prescan(src, "", opts))
+	root, err := filepath.Abs(srcdir)
+	Error(err)
+	opts.DocRoot = root
+
+	Error(prescan(srcdir, "", opts))
 	Error(NormalizeVariables())
 
-	files, err := scan(src, "", opts)
+	files, err := scan(srcdir, "", opts)
 
 	Error(err)
 
 	resolution, err := resolve(files)
 	Error(err)
-	Error(checkCommands(src, files, opts))
+	Error(checkCommands(srcdir, files, opts))
 
 	if opts.Print {
 		Print(files, resolution)
 	}
 
 	if dst != "" {
-		err := generate(files, resolution, src, dst, opts)
+		err := generate(files, resolution, srcdir, dst, opts)
 		Error(err)
 	}
 }

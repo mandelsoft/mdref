@@ -20,7 +20,7 @@ var _ = Describe("scanning commands", func() {
 	scanDoc := func(content string) (Commands, error) {
 		p := filepath.Join(dir, "doc.md")
 		Expect(os.WriteFile(p, []byte(content), 0o644)).To(Succeed())
-		_, _, _, cmds, err := scanRefs(p, Options{})
+		_, _, _, cmds, err := scanRefs(NewDocContext(p, Options{}))
 		return cmds, err
 	}
 
@@ -29,7 +29,7 @@ var _ = Describe("scanning commands", func() {
 		Expect(err).To(Succeed())
 		cmd := cmds["{{include!}{src.go}{outer}}"]
 		Expect(cmd).NotTo(BeNil())
-		data, err := cmd.GetSubstitution(filepath.Join(dir, "doc.md"), Options{})
+		data, err := cmd.GetSubstitution(docContext(filepath.Join(dir, "doc.md"), dir))
 		Expect(err).To(Succeed())
 		Expect(string(data)).To(Equal("a\nb\nc"))
 	})

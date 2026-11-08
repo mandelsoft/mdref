@@ -34,7 +34,7 @@ func ApplyGap(gap string, data []byte) []byte {
 type Command interface {
 	Position() string
 	EOL() bool
-	GetSubstitution(path string, opts Options) ([]byte, error)
+	GetSubstitution(ctx *DocContext) ([]byte, error)
 	// ApplyOptions applies the options given for the command
 	// ({{<name>!<option>,...}...}). It is only called if options are
 	// given, an empty list (just "!") selects the default options of
@@ -136,13 +136,14 @@ func (i *Include) EOL() bool {
 	return i.nl
 }
 
-func (i *Include) getData(p string) ([]byte, error) {
-	if !filepath.IsAbs(i.file) {
-		p = filepath.Join(filepath.Dir(p), i.file)
-	}
-	p, err := Subst(p)
+func (i *Include) getData(ctx *DocContext) ([]byte, error) {
+	// variables are substituted first, they may provide absolute paths
+	p, err := Subst(i.file, ctx)
 	if err != nil {
 		return nil, err
+	}
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(filepath.Dir(ctx.Document()), p)
 	}
 	data, err := os.ReadFile(p)
 	if err != nil {
@@ -197,8 +198,8 @@ func (i *filter) Filter(data []byte) ([]byte, error) {
 	return result, nil
 }
 
-func (i *Include) GetSubstitution(p string, opts Options) ([]byte, error) {
-	data, err := i.getData(p)
+func (i *Include) GetSubstitution(ctx *DocContext) ([]byte, error) {
+	data, err := i.getData(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -386,9 +387,9 @@ func (e *Execute) EOL() bool {
 	return e.nl
 }
 
-func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
+func (e *Execute) GetSubstitution(ctx *DocContext) ([]byte, error) {
 
-	if opts.SkipExecute {
+	if ctx.Options().SkipExecute {
 		return []byte{}, nil
 	}
 	if e.data != nil {
@@ -398,14 +399,14 @@ func (e *Execute) GetSubstitution(path string, opts Options) ([]byte, error) {
 	args := make([]string, len(e.cmd))
 	for i, arg := range e.cmd {
 		var err error
-		args[i], err = Subst(arg)
+		args[i], err = Subst(arg, ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 	stderr := &bytes.Buffer{}
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Dir = filepath.Dir(path)
+	cmd.Dir = filepath.Dir(ctx.Document())
 	cmd.Stderr = stderr
 	r, err := cmd.Output()
 	if err != nil {
@@ -532,7 +533,7 @@ func (e *Empty) EOL() bool {
 	return e.nl
 }
 
-func (e *Empty) GetSubstitution(path string, opts Options) ([]byte, error) {
+func (e *Empty) GetSubstitution(ctx *DocContext) ([]byte, error) {
 	return nil, nil
 }
 
@@ -575,7 +576,7 @@ type Variable struct {
 	value string
 }
 
-var variablePat = regexp.MustCompile("^{([a-zA-Z]+)}{([^{}]+)}$")
+var variablePat = regexp.MustCompile("^{(" + varNameExp + ")}{([^{}]+)}$")
 
 func NewVariable(pos Position, args []byte, nl bool, def bool) (Command, error) {
 	matches := variablePat.FindSubmatch(args)
@@ -584,6 +585,9 @@ func NewVariable(pos Position, args []byte, nl bool, def bool) (Command, error) 
 	}
 	name := string(matches[1])
 	value := string(matches[2])
+	if _, ok := PredefinedVariables[name]; ok {
+		return nil, fmt.Errorf("variable name %q is reserved for a predefined variable", name)
+	}
 	if def {
 		if _, ok := Variables[name]; ok {
 			return nil, fmt.Errorf("variable name %q already defined", name)

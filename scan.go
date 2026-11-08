@@ -137,17 +137,17 @@ func (f *File) Resolve(ref string, src string) (string, *Ref) {
 	return r, tgt
 }
 
-func prescan(src, rel string, opts Options) error {
-	list, err := os.ReadDir(src)
+func prescan(srcdir, rel string, opts Options) error {
+	list, err := os.ReadDir(srcdir)
 	if err != nil {
-		return fmt.Errorf("%s: %w", src, err)
+		return fmt.Errorf("%s: %w", srcdir, err)
 	}
 	for _, e := range list {
 		if e.Name() == "local" {
 			continue
 		}
 		rp := filepath.Join(rel, e.Name())
-		ep := filepath.Join(src, e.Name())
+		ep := filepath.Join(srcdir, e.Name())
 		if e.IsDir() {
 			err := prescan(ep, rp, opts)
 			if err != nil {
@@ -155,7 +155,7 @@ func prescan(src, rel string, opts Options) error {
 			}
 		} else {
 			if strings.HasSuffix(e.Name(), ".md") {
-				err = scanDefs(ep, opts)
+				err = scanDefs(NewDocContext(ep, opts))
 				if err != nil {
 					return err
 				}
@@ -165,13 +165,14 @@ func prescan(src, rel string, opts Options) error {
 	return nil
 }
 
-func scanDefs(src string, opts Options) error {
-	data, err := os.ReadFile(src)
+func scanDefs(ctx *DocContext) error {
+	srcfile := ctx.Document()
+	data, err := os.ReadFile(srcfile)
 	if err != nil {
-		return fmt.Errorf("cannot read %s: %w", src, err)
+		return fmt.Errorf("cannot read %s: %w", srcfile, err)
 	}
 	data, _ = normalizeLineEndings(data)
-	info := NewData(src, data)
+	info := NewData(srcfile, data)
 
 	// commands
 	matches, indices := info.scanFor(cmdExp)
@@ -191,25 +192,25 @@ func scanDefs(src string, opts Options) error {
 		default:
 		}
 		if err != nil {
-			return fmt.Errorf("%s: %s: %w", src, pos.Position(), err)
+			return fmt.Errorf("%s: %s: %w", srcfile, pos.Position(), err)
 		}
 	}
 	return nil
 }
 
-func scan(src, rel string, opts Options) ([]*File, error) {
+func scan(srcdir, rel string, opts Options) ([]*File, error) {
 	var result []*File
 
-	list, err := os.ReadDir(src)
+	list, err := os.ReadDir(srcdir)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", src, err)
+		return nil, fmt.Errorf("%s: %w", srcdir, err)
 	}
 	for _, e := range list {
 		if e.Name() == "local" {
 			continue
 		}
 		rp := filepath.Join(rel, e.Name())
-		ep := filepath.Join(src, e.Name())
+		ep := filepath.Join(srcdir, e.Name())
 		if e.IsDir() {
 			r, err := scan(ep, rp, opts)
 			if err != nil {
@@ -218,7 +219,7 @@ func scan(src, rel string, opts Options) ([]*File, error) {
 			result = append(result, r...)
 		} else {
 			if strings.HasSuffix(e.Name(), ".md") {
-				refs, trms, tgts, cmds, err := scanRefs(ep, opts)
+				refs, trms, tgts, cmds, err := scanRefs(NewDocContext(ep, opts))
 				if err != nil {
 					return nil, err
 				}
@@ -252,19 +253,20 @@ func toLineEndings(data []byte, win bool, opts Options) []byte {
 	return data
 }
 
-func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
+func scanRefs(ctx *DocContext) (Refs, Refs, Refs, Commands, error) {
+	srcfile := ctx.Document()
 	standard := map[string]struct{}{}
 	refs := Refs{}
 	trms := Refs{}
 	targets := Refs{}
 
-	data, err := os.ReadFile(src)
+	data, err := os.ReadFile(srcfile)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("cannot read %s: %w", src, err)
+		return nil, nil, nil, nil, fmt.Errorf("cannot read %s: %w", srcfile, err)
 	}
 	data, _ = normalizeLineEndings(data)
 
-	info := NewData(src, data)
+	info := NewData(srcfile, data)
 
 	// reference substitutions
 	matches, indices := info.scanFor(refExp)
@@ -308,10 +310,10 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 		pos := info.Position(indices[i][0])
 		key := string(m[1])
 		if _, ok := targets[key]; ok {
-			return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of target %q", src, pos.Position(), key)
+			return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of target %q", srcfile, pos.Position(), key)
 		}
 
-		ref := createAnchor(opts, data, pos, beg, end, key, string(m[3]), standard)
+		ref := createAnchor(ctx, data, pos, beg, end, key, string(m[3]), standard)
 		targets[key] = ref
 	}
 
@@ -336,14 +338,14 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 			cmd, err = NewPattern(pos, m[3], data[end-1] == '\n', false)
 		case "term":
 			if options != nil {
-				return nil, nil, nil, nil, fmt.Errorf("%s: %s: command %q: %w", src, pos.Position(), key, errNoOptions)
+				return nil, nil, nil, nil, fmt.Errorf("%s: %s: command %q: %w", srcfile, pos.Position(), key, errNoOptions)
 			}
 			var term string
 			var ref *Ref
-			term, ref, err = ParseTerm(src, pos, data, beg, end, m[3], standard, opts)
+			term, ref, err = ParseTerm(ctx, pos, data, beg, end, m[3], standard)
 			if ref != nil {
 				if targets[term] != nil {
-					return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of term %q", src, pos.Position(), term)
+					return nil, nil, nil, nil, fmt.Errorf("%s: %s: duplicate use of term %q", srcfile, pos.Position(), term)
 				}
 				targets[term] = ref
 				continue
@@ -366,7 +368,7 @@ func scanRefs(src string, opts Options) (Refs, Refs, Refs, Commands, error) {
 			}
 		}
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("%s: %s: %w", src, pos.Position(), err)
+			return nil, nil, nil, nil, fmt.Errorf("%s: %s: %w", srcfile, pos.Position(), err)
 		}
 		cmds[strings.TrimSpace(string(m[0]))] = cmd
 	}
@@ -440,9 +442,9 @@ func parseSubstCmd(key string, pos Position, def []byte, nl bool, gap ...string)
 	return cmd, err
 }
 
-func createAnchor(opts Options, data []byte, pos Position, begin, end int, key string, text string, standard map[string]struct{}) *Ref {
+func createAnchor(ctx *DocContext, data []byte, pos Position, begin, end int, key string, text string, standard map[string]struct{}) *Ref {
 	anchor, gen, heading := key, true, ""
-	if opts.Headings {
+	if ctx.Options().Headings {
 		anchor, gen, heading = determineAnchor(data, begin, end, key)
 		if !gen {
 			if _, ok := standard[anchor]; ok {
@@ -606,7 +608,8 @@ var termCmd = regexp.MustCompile("^{([`*_]?)([a-z][a-zA-Z0-9-_]+)}{([a-z]+)}((?:
 
 // --- begin symbol ---
 
-func ParseTerm(path string, pos Position, data []byte, begin, end int, args []byte, standard map[string]struct{}, opts Options) (string, *Ref, error) {
+func ParseTerm(ctx *DocContext, pos Position, data []byte, begin, end int, args []byte, standard map[string]struct{}) (string, *Ref, error) {
+	path, opts := ctx.Document(), ctx.Options()
 	matches := termCmd.FindSubmatch(args)
 	if len(matches) != 0 {
 		qual := string(matches[1])
@@ -622,7 +625,11 @@ func ParseTerm(path string, pos Position, data []byte, begin, end int, args []by
 		if err != nil {
 			return "", nil, fmt.Errorf("term %q: %w", name, err)
 		}
-		tdata, err := incl.GetSubstitution(path, Options{})
+		// the text of a term is always required, even if
+		// the execution of commands is skipped otherwise.
+		topts := opts
+		topts.SkipExecute = false
+		tdata, err := incl.GetSubstitution(NewDocContext(path, topts))
 		if err != nil {
 			return "", nil, fmt.Errorf("cannot extract term %q: %w", name, err)
 		}
@@ -630,7 +637,7 @@ func ParseTerm(path string, pos Position, data []byte, begin, end int, args []by
 		text := strings.TrimSpace(lines[0])
 		// fmt.Printf("identifier %q=%q\n", name, value)
 
-		ref := createAnchor(opts, data, pos, begin, end, name, text, standard)
+		ref := createAnchor(ctx, data, pos, begin, end, name, text, standard)
 		ref.format = qual
 		return name, ref, nil
 	}

@@ -1,8 +1,6 @@
 ## Commands
 {{commands:command}}
-<!--- begin variable --->
 {{variable}{democmd}{$(root)/democmd}}
-<!--- end variable --->
 
 Commands provide additional functionality to Markdown files.
 All commands use the same basic annotation syntax:

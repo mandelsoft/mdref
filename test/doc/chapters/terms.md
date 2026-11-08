@@ -178,5 +178,5 @@ content: this is some test content
 content: provided by a definition file.
 <!--- end content --->
 	
-{{variable}{root}{../../..}}
+{{variable}{root}{$(REL_DIR_TO_DOC_ROOT)/..}}
 ```

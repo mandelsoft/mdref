@@ -29,7 +29,7 @@ var _ = Describe("commands", func() {
 	})
 
 	substitute := func(cmd Command) string {
-		data, err := cmd.GetSubstitution(filepath.Join(dir, "doc.md"), Options{})
+		data, err := cmd.GetSubstitution(docContext(filepath.Join(dir, "doc.md"), dir))
 		Expect(err).To(Succeed())
 		return string(data)
 	}
@@ -123,6 +123,61 @@ var _ = Describe("commands", func() {
 			Expect(err).To(Succeed())
 			Expect(cmd.ApplyOptions([]string{})).To(MatchError(errNoOptions))
 			Expect(cmd.ApplyOptions([]string{"nomarkers"})).To(MatchError("no options supported"))
+		})
+	})
+
+	Context("variables", func() {
+		It("includes files given by DOC_ROOT and REL_DIR_TO_DOC_ROOT", func() {
+			sub := filepath.Join(dir, "doc", "chapters")
+			Expect(os.MkdirAll(sub, 0o755)).To(Succeed())
+			withVariables(nil)
+			doc := filepath.Join(sub, "x.md")
+			for _, args := range []string{"{$(DOC_ROOT)/src.go}{inner}", "{$(REL_DIR_TO_DOC_ROOT)/src.go}{inner}"} {
+				cmd, err := NewInclude(Position{}, []byte(args), false)
+				Expect(err).To(Succeed())
+				data, err := cmd.GetSubstitution(docContext(doc, dir))
+				Expect(err).To(Succeed(), args)
+				Expect(string(data)).To(Equal("b"), args)
+			}
+		})
+
+		It("substitutes execute arguments for the document", func() {
+			sub := filepath.Join(dir, "doc")
+			Expect(os.MkdirAll(sub, 0o755)).To(Succeed())
+			withVariables(nil)
+			cmd, err := NewExecute(Position{}, []byte("{cat}{$(REL_DIR_TO_DOC_ROOT)/src.go}{<extract>}{inner}"), false)
+			Expect(err).To(Succeed())
+			data, err := cmd.GetSubstitution(docContext(filepath.Join(sub, "x.md"), dir))
+			Expect(err).To(Succeed())
+			Expect(string(data)).To(Equal("b"))
+		})
+
+		It("accepts variable names with digits", func() {
+			withVariables(nil)
+			_, err := NewVariable(Position{}, []byte("{lib2}{x}"), false, true)
+			Expect(err).To(Succeed())
+			Expect(Variables).To(HaveKeyWithValue("lib2", "x"))
+		})
+
+		It("accepts variable names with underscores", func() {
+			withVariables(nil)
+			_, err := NewVariable(Position{}, []byte("{my_lib}{x}"), false, true)
+			Expect(err).To(Succeed())
+			Expect(Variables).To(HaveKeyWithValue("my_lib", "x"))
+		})
+
+		It("rejects variable names starting with a digit or underscore", func() {
+			withVariables(nil)
+			_, err := NewVariable(Position{}, []byte("{2lib}{x}"), false, true)
+			Expect(err).To(MatchError(`invalid variable arguments "{2lib}{x}"`))
+			_, err = NewVariable(Position{}, []byte("{_lib}{x}"), false, true)
+			Expect(err).To(MatchError(`invalid variable arguments "{_lib}{x}"`))
+		})
+
+		It("rejects the definition of predefined variables", func() {
+			withVariables(nil)
+			_, err := NewVariable(Position{}, []byte("{DOC_ROOT}{x}"), false, true)
+			Expect(err).To(MatchError(`variable name "DOC_ROOT" is reserved for a predefined variable`))
 		})
 	})
 })

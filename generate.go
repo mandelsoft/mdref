@@ -19,28 +19,28 @@ func comment(s string, l int) []byte {
 	return []byte(fmt.Sprintf(fmt.Sprintf("<!-- %%-%ds -->\n", l), s))
 }
 
-func generate(files []*File, resolution Resolution, source, target string, opts Options) error {
+func generate(files []*File, resolution Resolution, srcdir, tgtdir string, opts Options) error {
 	for _, f := range files {
 		if filepath.Base(f.relpath) == "_definitions.md" {
 			continue
 		}
-		tgt := filepath.Join(target, f.relpath)
-		src := filepath.Join(source, f.relpath)
-		rf, err := os.Open(src)
+		tgtfile := filepath.Join(tgtdir, f.relpath)
+		srcfile := filepath.Join(srcdir, f.relpath)
+		rf, err := os.Open(srcfile)
 		if err != nil {
-			return fmt.Errorf("cannot read source %s: %w", src, err)
+			return fmt.Errorf("cannot read source %s: %w", srcfile, err)
 		}
 		var r io.Reader = rf
 
-		os.MkdirAll(filepath.Dir(tgt), 0o766)
-		w, err := os.OpenFile(tgt, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+		os.MkdirAll(filepath.Dir(tgtfile), 0o766)
+		w, err := os.OpenFile(tgtfile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 		if err != nil {
 			rf.Close()
-			return fmt.Errorf("cannot create target %s: %w", tgt, err)
+			return fmt.Errorf("cannot create tgtdir %s: %w", tgtfile, err)
 		}
 		var header []byte
 		if strings.HasSuffix(f.relpath, ".md") {
-			rel, err := filepath.Rel(filepath.Dir(tgt), src)
+			rel, err := filepath.Rel(filepath.Dir(tgtfile), srcfile)
 			l := len(rel) + 5
 			if l < 31 {
 				l = 31
@@ -73,14 +73,14 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 				rf.Close()
 				w.Close()
 				if err != nil {
-					return fmt.Errorf("cannot read source %s: %w", src, err)
+					return fmt.Errorf("cannot read source %s: %w", srcfile, err)
 				}
 			} else {
 				data, err := io.ReadAll(r)
 				if err != nil {
 					rf.Close()
 					w.Close()
-					return fmt.Errorf("cannot read source %s: %w", src, err)
+					return fmt.Errorf("cannot read source %s: %w", srcfile, err)
 				}
 				data, win = normalizeLineEndings(data)
 				if opts.Unix {
@@ -117,7 +117,7 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 
 				for k, c := range f.commands {
 					// exp := regexp.MustCompile(regexp.QuoteMeta(k))
-					sub, err := c.GetSubstitution(src, opts)
+					sub, err := c.GetSubstitution(NewDocContext(srcfile, opts))
 					if err != nil {
 						return fmt.Errorf("%s: %s: %s; %w", f.relpath, c.Position(), k, err)
 					}
@@ -151,7 +151,7 @@ func generate(files []*File, resolution Resolution, source, target string, opts 
 				rf.Close()
 				w.Close()
 				if err != nil {
-					return fmt.Errorf("cannot write target %s: %w", tgt, err)
+					return fmt.Errorf("cannot write tgtdir %s: %w", tgtfile, err)
 				}
 			}
 		}
