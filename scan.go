@@ -42,6 +42,10 @@ type Ref struct {
 	text     string
 	anchor   string
 	generate bool
+	// heading is the heading anchor of an anchor for the complete
+	// document (empty anchor) located at the first heading of the
+	// document. It is used for references from the same document.
+	heading string
 }
 
 func (r *Ref) Raw() []byte {
@@ -107,6 +111,10 @@ func (f *File) HasSubst() bool {
 func (f *File) Resolve(ref string, src string) (string, *Ref) {
 	tgt := f.targets[ref]
 	if src == f.relpath {
+		if tgt.anchor == "" && tgt.heading != "" {
+			// the document itself, referenced by its first heading
+			return "#" + tgt.heading, tgt
+		}
 		return "#" + tgt.anchor, tgt
 	}
 
@@ -433,9 +441,9 @@ func parseSubstCmd(key string, pos Position, def []byte, nl bool, gap ...string)
 }
 
 func createAnchor(opts Options, data []byte, pos Position, begin, end int, key string, text string, standard map[string]struct{}) *Ref {
-	anchor, gen := key, true
+	anchor, gen, heading := key, true, ""
 	if opts.Headings {
-		anchor, gen = determineAnchor(data, begin, end, key)
+		anchor, gen, heading = determineAnchor(data, begin, end, key)
 		if !gen {
 			if _, ok := standard[anchor]; ok {
 				// similar heading used twice in document
@@ -454,6 +462,7 @@ func createAnchor(opts Options, data []byte, pos Position, begin, end int, key s
 		text:      text,
 		anchor:    anchor,
 		generate:  gen,
+		heading:   heading,
 	}
 }
 
@@ -514,13 +523,16 @@ func first(data []byte, pos int) bool {
 	return strings.TrimSpace(string(data[:pos])) == ""
 }
 
-func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
+// determineAnchor determines the anchor for an anchor annotation:
+// the heading anchor of a heading directly before or after it,
+// or the given default (generate=true). An anchor at the first
+// heading of the document refers to the complete document: the
+// anchor is empty and the heading anchor is provided separately.
+func determineAnchor(data []byte, beg, end int, def string) (anchor string, generate bool, heading string) {
 	var title []byte
 	if len(data) > end && data[end-1] == '\n' && data[end] == '#' {
 		// before heading
-		if first(data, beg) {
-			return "", false
-		}
+		document := first(data, beg)
 		s := end + 1
 		// skip section depth
 		for s < len(data) {
@@ -540,10 +552,13 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 		if s < len(data) {
 			title = data[s:e]
 		}
+		if document {
+			return "", false, headingAnchor(title)
+		}
 	} else {
 		if data[beg] == '\n' {
-			// possibly after heading
-			e := beg - 1
+			// possibly after heading (beg is the end of the heading line)
+			e := beg
 			s := e
 			// get previous line
 			for s > 0 {
@@ -560,27 +575,31 @@ func determineAnchor(data []byte, beg, end int, def string) (string, bool) {
 			}
 			if found {
 				if first(data, s) {
-					return "", false
+					return "", false, headingAnchor(line)
 				}
 				title = line
 			}
 		}
 	}
 
-	link := strings.ToLower(strings.TrimSpace(string(title)))
-	if len(link) > 0 {
-		l := ""
-		for _, c := range link {
-			if unicode.IsLetter(c) || unicode.IsDigit(c) {
-				l += string(c)
-			}
-			if c == ' ' {
-				l += "-"
-			}
-		}
-		return l, false
+	if l := headingAnchor(title); l != "" {
+		return l, false, ""
 	}
-	return def, true
+	return def, true, ""
+}
+
+// headingAnchor provides the standard Markdown anchor for a heading title.
+func headingAnchor(title []byte) string {
+	l := ""
+	for _, c := range strings.ToLower(strings.TrimSpace(string(title))) {
+		if unicode.IsLetter(c) || unicode.IsDigit(c) {
+			l += string(c)
+		}
+		if c == ' ' {
+			l += "-"
+		}
+	}
+	return l
 }
 
 var termCmd = regexp.MustCompile("^{([`*_]?)([a-z][a-zA-Z0-9-_]+)}{([a-z]+)}((?:{[^{}]+})+)$")

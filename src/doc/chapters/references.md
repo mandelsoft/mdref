@@ -37,4 +37,8 @@ If placed directly before or after a Markdown section heading
 (and the option `--headings`) is given, no explicit anchor is generated,
 but the Markdown anchor name is used for the references.
 This keeps the generated file viewable by Markdown viewers not able to
-work with anchors. 
+work with anchors.
+If the heading is the first element of the document, the anchor denotes the
+complete document: references from other documents link to the document
+itself (without anchor), references from the same document use the
+Markdown anchor of the heading. 

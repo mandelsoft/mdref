@@ -46,7 +46,7 @@ markdown file.
 
 It additionally accepts some [filtering a substitution options]({{filtering}}).
 
-Supported [command options](#commands):
+Supported [command options]({{commands}}):
 
 - `nomarkers` (default): removes the marker lines (`--- begin <key> ---` and
   `--- end <key> ---` of any key) from the included content.
@@ -69,7 +69,7 @@ as current working directory to resolve relative file names.
 Optionally the special argument `{<extract>}` can be used to append 
 some line selection arguments according to the [`include`](#include) command, line range as well as pattern selection and the optional additional filter argument.
 
-Supported [command options](#commands):
+Supported [command options]({{commands}}):
 
 - `nomarkers` (default): removes the marker lines (`--- begin <key> ---` and
   `--- end <key> ---` of any key) from the substituted content.

@@ -22,7 +22,7 @@ even the request for the default options.
 
 There are two classes of commands:
 - [Substitution Commands](#substitution-commands)
-- [Definition Commands](#definition-command)
+- [Definition Commands](#definition-commands)
 
 ### Substitution Commands 
 
